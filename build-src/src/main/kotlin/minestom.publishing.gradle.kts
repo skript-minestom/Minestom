@@ -18,12 +18,12 @@ publishing.publications.create<MavenPublication>("maven") {
     pom {
         name.set(this@create.artifactId)
         description.set("$mcVersion Lightweight Minecraft server")
-        url.set("https://github.com/minestom/minestom")
+        url.set("https://github.com/skript-minestom/minestom")
 
         licenses {
             license {
                 name.set("Apache 2.0")
-                url.set("https://github.com/minestom/minestom/blob/main/LICENSE")
+                url.set("https://github.com/skript-minestom/minestom/blob/master/LICENSE")
             }
         }
 
@@ -40,7 +40,7 @@ publishing.publications.create<MavenPublication>("maven") {
 
         issueManagement {
             system.set("GitHub")
-            url.set("https://github.com/minestom/minestom/issues")
+            url.set("https://github.com/skript-minestom/minestom/issues")
         }
 
         scm {
@@ -52,7 +52,7 @@ publishing.publications.create<MavenPublication>("maven") {
 
         ciManagement {
             system.set("Github Actions")
-            url.set("https://github.com/minestom/minestom/actions")
+            url.set("https://github.com/skript-minestom/minestom/actions")
         }
     }
 }
