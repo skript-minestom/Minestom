@@ -22,7 +22,7 @@ jobs:
         run: ./gradlew test javadoc
   publish:
     name: Publish PR
-    if: contains(github.event.pull_request.labels.*.name, 'Publish Pull Request') && github.repository_owner == 'Minestom'
+    if: contains(github.event.pull_request.labels.*.name, 'Publish Pull Request') && github.repository_owner == 'skript-minestom'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository

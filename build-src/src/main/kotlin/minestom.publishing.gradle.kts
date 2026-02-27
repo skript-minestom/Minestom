@@ -44,9 +44,9 @@ publishing.publications.create<MavenPublication>("maven") {
         }
 
         scm {
-            connection.set("scm:git:git://github.com/minestom/minestom.git")
-            developerConnection.set("scm:git:git@github.com:minestom/minestom.git")
-            url.set("https://github.com/minestom/minestom")
+            connection.set("scm:git:git://github.com/skript-minestom/minestom.git")
+            developerConnection.set("scm:git:git@github.com:skript-minestom/minestom.git")
+            url.set("https://github.com/skript-minestom/minestom")
             tag.set("HEAD")
         }
 

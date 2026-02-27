@@ -105,10 +105,14 @@ tasks.register<Test>("testWithAgent") {
 // Publishing configuration below
 
 nmcpAggregation {
-    centralPortal {
-        username = System.getenv("SONATYPE_USERNAME")
-        password = System.getenv("SONATYPE_PASSWORD")
-        publishingType = "AUTOMATIC"
+    repositories {
+        maven {
+            url = uri("https://maven.hapily.me/releases")
+            credentials {
+                username = System.getenv("REPO_HAPILY_USERNAME")
+                password = System.getenv("REPO_HAPILY_PASSWORD")
+            }
+        }
     }
 }
 
