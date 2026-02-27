@@ -110,8 +110,8 @@ nmcpAggregation {
             name = "nmcp"
             url = uri("https://maven.hapily.me/releases/")
             credentials {
-                username = System.getenv("REPO_HAPILY_USERNAME") ?: throw GradleException("NMCP username missing")
-                password = System.getenv("REPO_HAPILY_PASSWORD") ?: throw GradleException("NMCP password missing")
+                username = System.getenv("REPO_HAPILY_USERNAME")
+                password = System.getenv("REPO_HAPILY_PASSWORD")
             }
         }
     }
