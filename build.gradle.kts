@@ -107,7 +107,7 @@ tasks.register<Test>("testWithAgent") {
 nmcpAggregation {
     repositories {
         maven {
-            url = uri("https://maven.hapily.me/releases")
+            url = uri("https://maven.hapily.me/releases/")
             credentials {
                 username = System.getenv("REPO_HAPILY_USERNAME")
                 password = System.getenv("REPO_HAPILY_PASSWORD")

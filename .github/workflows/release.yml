@@ -50,9 +50,9 @@ jobs:
         env:
           MINESTOM_VERSION: ${{ steps.version.outputs.version }}
 
-      - name: Publish to Maven Central
+      - name: Publish to Maven Repository
         if: github.repository_owner == 'skript-minestom'
-        run: ./gradlew publishAllPublicationsToNmcpRepository --no-configuration-cache
+        run: ./gradlew publishAllPublicationsToNmcpRepository --no-configuration-cache --info
         env:
           MINESTOM_VERSION: ${{ steps.version.outputs.version }}
           REPO_HAPILY_USERNAME: ${{ secrets.REPO_HAPILY_USERNAME }}
