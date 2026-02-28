@@ -104,10 +104,9 @@ tasks.register<Test>("testWithAgent") {
 
 // Publishing configuration below
 
-nmcpAggregation {
+publishing {
     repositories {
         maven {
-            name = "nmcp"
             url = uri("https://maven.hapily.me/releases/")
             credentials {
                 username = System.getenv("REPO_HAPILY_USERNAME")
