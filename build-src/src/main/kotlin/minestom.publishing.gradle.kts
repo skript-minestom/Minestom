@@ -10,7 +10,7 @@ val mcVersion = minestomDataVersion.split("-")[0]
 
 publishing.publications.create<MavenPublication>("maven") {
     groupId = project.group.toString()
-    artifactId = project.name // eg "minestom" or "testing"
+    artifactId = project.name + "-sm" // eg "minestom" or "testing"
     version = project.version.toString()
 
     from(project.components["java"])
