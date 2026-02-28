@@ -31,42 +31,20 @@ Minestom is not installed like Bukkit/Forge/Sponge.
 As Minestom is a Java library, it must be loaded the same way any other Java library may be loaded.
 This means you need to add Minestom as a dependency, add your code and compile by yourself.
 
-Minestom is available on [Maven Central](https://mvnrepository.com/artifact/net.minestom/minestom),
-and can be installed like the following (Gradle/Kotlin):
+Minestom can be installed like the following (Gradle/Kotlin):
 
 [![](https://img.shields.io/maven-central/v/net.minestom/minestom)](https://mvnrepository.com/artifact/net.minestom/minestom)
 
 ```kotlin
 repositories {
-    mavenCentral()
+    maven("https://maven.hapily.me/releases")
 }
 
 dependencies {
-    implementation("net.minestom:minestom:<latest release>")
+    implementation("net.minestom:minestom-sm:<latest release>")
     
     // If you want to use the integration testing library.
-    testImplementation("net.minestom:testing:<latest release>")
-}
-```
-
-PR branches tagged with the "Publish Pull Request" tag are published to the maven central snapshot repository, which can
-be used to test new features before they are released. The version for these snapshots is `<branch>-SNAPSHOT`, where 
-`<branch>` is the name of the branch.
-
-```kotlin
-repositories {
-    maven(url = "https://central.sonatype.com/repository/maven-snapshots/") {
-        content { // This filtering is optional, but recommended
-            includeModule("net.minestom", "minestom")
-            includeModule("net.minestom", "testing")
-        }
-    }
-    mavenCentral()
-}
-
-dependencies {
-    implementation("net.minestom:minestom:<branch>-SNAPSHOT")
-    testImplementation("net.minestom:testing:<branch>-SNAPSHOT")
+    testImplementation("net.minestom:testing-sm:<latest release>")
 }
 ```
 
