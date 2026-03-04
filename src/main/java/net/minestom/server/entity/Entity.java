@@ -512,7 +512,7 @@ public class Entity implements Viewable, Tickable, Schedulable, Snapshotable, Ev
     }
 
     @Override
-    public final boolean addViewer(Player player) {
+    public boolean addViewer(Player player) {
         Check.stateCondition(!isActive(), "Entities must be in an instance before adding viewers");
         if (!viewEngine.manualAdd(player)) return false;
         updateNewViewer(player);
@@ -520,7 +520,7 @@ public class Entity implements Viewable, Tickable, Schedulable, Snapshotable, Ev
     }
 
     @Override
-    public final boolean removeViewer(Player player) {
+    public boolean removeViewer(Player player) {
         if (!viewEngine.manualRemove(player)) return false;
         updateOldViewer(player);
         return true;
