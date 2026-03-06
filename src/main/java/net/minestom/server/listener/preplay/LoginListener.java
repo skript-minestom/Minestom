@@ -211,7 +211,8 @@ public final class LoginListener {
         try {
             ConnectionManager connectionManager = MinecraftServer.getConnectionManager();
             final Player player = connectionManager.createPlayer(connection, gameProfile);
-            if (!connectionManager.playerExists(connection)) return;
+            //noinspection ConstantValue
+            if (player == null) return;
             executeConfig(player, true);
         } catch (Throwable t) {
             MinecraftServer.getExceptionManager().handleException(t);
@@ -245,7 +246,6 @@ public final class LoginListener {
     }
 
     private static void executeConfig(Player player, boolean isFirstConfig) {
-        if (!MinecraftServer.getConnectionManager().playerExists(player.getPlayerConnection())) return;
         // We have to create another thread (even though we should already be in a virtual thread)
         // because configuration handling involves waiting for the client to send a known packs packet.
         // Which mean that we have to free up the current thread to continue reading the socket.
