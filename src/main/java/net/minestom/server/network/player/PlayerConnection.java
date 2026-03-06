@@ -158,6 +158,7 @@ public abstract class PlayerConnection {
             if (serverState == ConnectionState.PLAY && !player.isRemoved())
                 player.scheduleNextTick(Entity::remove);
             else {
+                if (player.getInstance() == null) return;
                 EventDispatcher.call(new PlayerDisconnectEvent(player));
                 EventsJFR.newPlayerLeave(player.getUuid()).commit();
             }
