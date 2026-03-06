@@ -565,8 +565,11 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
 
         if (permanent) {
             this.packets.clear();
-            EventDispatcher.call(new PlayerDisconnectEvent(this));
-            EventsJFR.newPlayerLeave(getUuid()).commit();
+            //noinspection ConstantValue
+            if (instance != null) {
+                EventDispatcher.call(new PlayerDisconnectEvent(this));
+                EventsJFR.newPlayerLeave(getUuid()).commit();
+            }
         }
 
         final AbstractInventory currentInventory = getOpenInventory();

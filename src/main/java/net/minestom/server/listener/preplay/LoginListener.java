@@ -8,6 +8,7 @@ import net.minestom.server.Auth;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.entity.Player;
 import net.minestom.server.extras.mojangAuth.MojangCrypt;
+import net.minestom.server.network.ConnectionManager;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.packet.client.configuration.ClientFinishConfigurationPacket;
 import net.minestom.server.network.packet.client.configuration.ClientSelectKnownPacksPacket;
@@ -208,7 +209,9 @@ public final class LoginListener {
         final GameProfile gameProfile = socketConnection.gameProfile();
         assert gameProfile != null;
         try {
-            final Player player = MinecraftServer.getConnectionManager().createPlayer(connection, gameProfile);
+            ConnectionManager connectionManager = MinecraftServer.getConnectionManager();
+            final Player player = connectionManager.createPlayer(connection, gameProfile);
+            if (!connectionManager.playerExists(connection)) return;
             executeConfig(player, true);
         } catch (Throwable t) {
             MinecraftServer.getExceptionManager().handleException(t);

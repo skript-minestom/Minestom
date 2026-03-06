@@ -109,6 +109,10 @@ public final class ConnectionManager {
         return connectionPlayerMap.get(connection);
     }
 
+    public boolean playerExists(PlayerConnection connection) {
+        return connectionPlayerMap.containsKey(connection);
+    }
+
     /**
      * Gets the first player in the play state which validates {@link String#equalsIgnoreCase(String)}.
      * <p>
