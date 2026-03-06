@@ -179,7 +179,8 @@ public final class ConnectionManager {
     public Player createPlayer(PlayerConnection connection, GameProfile gameProfile) {
         assert ServerFlag.INSIDE_TEST || Thread.currentThread().isVirtual();
         final Player player = playerProvider.createPlayer(connection, gameProfile);
-        this.connectionPlayerMap.put(connection, player);
+        //noinspection ConstantValue
+        if (player != null) this.connectionPlayerMap.put(connection, player);
         return player;
     }
 
