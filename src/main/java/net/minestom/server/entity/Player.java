@@ -638,7 +638,10 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
         // Ensure that surrounding chunks are loaded
         List<CompletableFuture<Chunk>> futures = new ArrayList<>();
         ChunkRange.chunksInRange(spawnPosition, this.effectiveViewDistance(), (chunkX, chunkZ) -> {
-            final CompletableFuture<Chunk> future = instance.loadOptionalChunk(chunkX, chunkZ);
+            final CompletableFuture<Chunk> future = instance.loadOptionalChunk(chunkX, chunkZ).whenComplete((chunk, throwable) -> {
+                if (throwable != null || chunk != null) return;
+                sendPacket(new UnloadChunkPacket(chunkX, chunkZ));
+            });
             if (!future.isDone()) futures.add(future);
         });
         if (futures.isEmpty()) {
