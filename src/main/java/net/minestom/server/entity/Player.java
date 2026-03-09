@@ -44,10 +44,7 @@ import net.minestom.server.event.item.ItemDropEvent;
 import net.minestom.server.event.item.PickupExperienceEvent;
 import net.minestom.server.event.item.PlayerFinishItemUseEvent;
 import net.minestom.server.event.player.*;
-import net.minestom.server.instance.Chunk;
-import net.minestom.server.instance.EntityTracker;
-import net.minestom.server.instance.Instance;
-import net.minestom.server.instance.SharedInstance;
+import net.minestom.server.instance.*;
 import net.minestom.server.instance.block.Block;
 import net.minestom.server.inventory.AbstractInventory;
 import net.minestom.server.inventory.Inventory;
@@ -640,7 +637,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
         ChunkRange.chunksInRange(spawnPosition, this.effectiveViewDistance(), (chunkX, chunkZ) -> {
             final CompletableFuture<Chunk> future = instance.loadOptionalChunk(chunkX, chunkZ).whenComplete((chunk, throwable) -> {
                 if (throwable != null || chunk != null) return;
-                sendPacket(new UnloadChunkPacket(chunkX, chunkZ));
+                sendPacket(ChunkDataPacket.getEmpty(chunkX, chunkZ));
             });
             if (!future.isDone()) futures.add(future);
         });
