@@ -1,10 +1,14 @@
 package net.minestom.server.network.packet.server.play;
 
+import net.minestom.server.instance.ChunkLoader;
+import net.minestom.server.instance.Instance;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.NetworkBufferTemplate;
+import net.minestom.server.network.packet.server.SendablePacket;
 import net.minestom.server.network.packet.server.ServerPacket;
 import net.minestom.server.network.packet.server.play.data.ChunkData;
 import net.minestom.server.network.packet.server.play.data.LightData;
+import net.minestom.server.utils.chunk.ChunkSupplier;
 
 import java.util.BitSet;
 import java.util.List;
@@ -25,11 +29,8 @@ public record ChunkDataPacket(
             LightData.NETWORK_TYPE, ChunkDataPacket::lightData,
             ChunkDataPacket::new
     );
-    private static final ChunkData EMPTY_CHUNK_DATA = new ChunkData(Map.of(), new byte[0], Map.of());
-    private static final LightData EMPTY_LIGHT_DATA = new LightData(new BitSet(), new BitSet(), new BitSet(), new BitSet(),
-            List.of(), List.of());
 
-    public static ChunkDataPacket getEmpty(int chunkX, int chunkZ) {
-        return new ChunkDataPacket(chunkX, chunkZ, EMPTY_CHUNK_DATA, EMPTY_LIGHT_DATA);
+    public static SendablePacket getEmpty(Instance instance, int chunkX, int chunkZ, ChunkSupplier chunkSupplier) {
+        return chunkSupplier.createChunk(instance, chunkX, chunkZ).getFullDataPacket();
     }
 }
