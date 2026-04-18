@@ -63,7 +63,7 @@ public record PlayerInfoUpdatePacket(
                 newEntries.add(new Entry(entry.uuid, entry.username,
                         entry.properties, entry.listed, entry.latency,
                         entry.gameMode, operator.apply(displayName),
-                        entry.chatSession, entry.listOrder, entry.displayHat));
+                        entry.chatSession, entry.listPriority, entry.displayHat));
             } else {
                 newEntries.add(entry);
             }
@@ -74,7 +74,7 @@ public record PlayerInfoUpdatePacket(
     public record Entry(UUID uuid, String username, List<Property> properties,
                         boolean listed, int latency, GameMode gameMode,
                         @Nullable Component displayName, @Nullable ChatSession chatSession,
-                        int listOrder, boolean displayHat) {
+                        int listPriority, boolean displayHat) {
         public Entry {
             properties = List.copyOf(properties);
         }
@@ -97,7 +97,7 @@ public record PlayerInfoUpdatePacket(
                     GameMode gameMode = GameMode.SURVIVAL;
                     Component displayName = null;
                     ChatSession chatSession = null;
-                    int listOrder = 0;
+                    int listPriority = 0;
                     boolean displayHat = true;
                     for (Action action : actions) {
                         switch (action) {
@@ -110,11 +110,11 @@ public record PlayerInfoUpdatePacket(
                             case UPDATE_LISTED -> listed = buffer.read(BOOLEAN);
                             case UPDATE_LATENCY -> latency = buffer.read(VAR_INT);
                             case UPDATE_DISPLAY_NAME -> displayName = buffer.read(COMPONENT.optional());
-                            case UPDATE_LIST_ORDER -> listOrder = buffer.read(VAR_INT);
+                            case UPDATE_LIST_PRIORITY -> listPriority = buffer.read(VAR_INT);
                             case UPDATE_HAT -> displayHat = buffer.read(BOOLEAN);
                         }
                     }
-                    return new Entry(uuid, username, properties, listed, latency, gameMode, displayName, chatSession, listOrder, displayHat);
+                    return new Entry(uuid, username, properties, listed, latency, gameMode, displayName, chatSession, listPriority, displayHat);
                 }
             };
         }
@@ -142,7 +142,7 @@ public record PlayerInfoUpdatePacket(
         UPDATE_LISTED((writer, entry) -> writer.write(BOOLEAN, entry.listed)),
         UPDATE_LATENCY((writer, entry) -> writer.write(VAR_INT, entry.latency)),
         UPDATE_DISPLAY_NAME((writer, entry) -> writer.write(COMPONENT.optional(), entry.displayName)),
-        UPDATE_LIST_ORDER((writer, entry) -> writer.write(VAR_INT, entry.listOrder)),
+        UPDATE_LIST_PRIORITY((writer, entry) -> writer.write(VAR_INT, entry.listPriority)),
         UPDATE_HAT((writer, entry) -> writer.write(BOOLEAN, entry.displayHat));
 
         final Writer writer;
