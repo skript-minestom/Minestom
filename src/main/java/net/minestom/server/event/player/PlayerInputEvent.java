@@ -49,6 +49,13 @@ public final class PlayerInputEvent implements PlayerInstanceEvent {
     }
 
     /**
+     * @return true if the player was holding the forward key (typically the 'W' key) in the previous tick.
+     */
+    public boolean wasPressingForwardKey() {
+        return this.oldForward;
+    }
+
+    /**
      * @return true if the player has just pressed the forward key (typically the 'W' key).
      */
     public boolean hasPressedForwardKey() {
@@ -67,6 +74,13 @@ public final class PlayerInputEvent implements PlayerInstanceEvent {
      */
     public boolean isHoldingBackwardKey() {
         return this.player.inputs().backward();
+    }
+
+    /**
+     * @return true if the player was holding the backward key (typically the 'S' key) in the previous tick.
+     */
+    public boolean wasPressingBackwardKey() {
+        return this.oldBackward;
     }
 
     /**
@@ -91,6 +105,13 @@ public final class PlayerInputEvent implements PlayerInstanceEvent {
     }
 
     /**
+     * @return true if the player was holding the left key (typically the 'A' key) in the previous tick.
+     */
+    public boolean wasPressingLeftKey() {
+        return this.oldLeft;
+    }
+
+    /**
      * @return true if the player has just pressed the left key (typically the 'A' key).
      */
     public boolean hasPressedLeftKey() {
@@ -109,6 +130,13 @@ public final class PlayerInputEvent implements PlayerInstanceEvent {
      */
     public boolean isHoldingRightKey() {
         return this.player.inputs().right();
+    }
+
+    /**
+     * @return true if the player was holding the right key (typically the 'D' key) in the previous tick.
+     */
+    public boolean wasPressingRightKey() {
+        return this.oldRight;
     }
 
     /**
@@ -136,6 +164,13 @@ public final class PlayerInputEvent implements PlayerInstanceEvent {
     }
 
     /**
+     * @return true if the player was holding the jump key (typically the spacebar) in the previous tick.
+     */
+    public boolean wasPressingJumpKey() {
+        return this.oldJump;
+    }
+
+    /**
      * @return true if the player has just pressed the jump key (typically the spacebar).
      * @apiNote If the player has auto-jump enabled, for 1 tick this will return true even if the player did not actually press the jump key.
      */
@@ -159,6 +194,13 @@ public final class PlayerInputEvent implements PlayerInstanceEvent {
     }
 
     /**
+     * @return true if the player was holding the shift key (typically the left shift key) in the previous tick.
+     */
+    public boolean wasPressingShiftKey() {
+        return this.oldShift;
+    }
+
+    /**
      * @return true if the player has just pressed the shift key (typically the left shift key).
      */
     public boolean hasPressedShiftKey() {
@@ -178,6 +220,14 @@ public final class PlayerInputEvent implements PlayerInstanceEvent {
      */
     public boolean isHoldingSprintKey() {
         return this.player.inputs().sprint();
+    }
+
+    /**
+     * @return true if the player was holding the sprint key (typically the left control key) in the previous tick.
+     * @apiNote This method only reports the state of the sprint key itself, not other ways to start sprinting such as double-tapping the forward key.
+     */
+    public boolean wasPressingSprintKey() {
+        return this.oldSprint;
     }
 
     /**
