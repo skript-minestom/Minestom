@@ -28,10 +28,9 @@ import java.io.IOException;
  */
 public class ArgumentItemStack extends Argument<ItemStack> {
 
-    public static final int NO_MATERIAL = 1;
-    public static final int INVALID_NBT = 2;
-    public static final int INVALID_MATERIAL = 3;
-    public static final int INVALID_COMPONENT = 4;
+    public static final int INVALID_NBT = 1;
+    public static final int INVALID_MATERIAL = 2;
+    public static final int INVALID_COMPONENT = 3;
 
     public ArgumentItemStack(String id) {
         super(id, true);
