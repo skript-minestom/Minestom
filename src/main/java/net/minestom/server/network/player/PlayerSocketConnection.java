@@ -110,10 +110,6 @@ public class PlayerSocketConnection extends PlayerConnection {
         NetworkBuffer readBuffer = this.readBuffer;
         final long writeIndex = readBuffer.writeIndex();
         final int length = readBuffer.readChannel(channel);
-        if (length == 0) {
-            LockSupport.parkNanos(100_000);
-            return;
-        }
         // Decrypt newly read data
         final EncryptionContext encryptionContext = this.encryptionContext;
         if (encryptionContext != null) {
@@ -421,7 +417,7 @@ public class PlayerSocketConnection extends PlayerConnection {
                 this.writeLeftover = null;
                 PacketVanilla.PACKET_POOL.add(leftover);
             } else {
-                LockSupport.parkNanos(100_000);
+                // Failed to write the whole leftover, try again next flush
                 return;
             }
         }

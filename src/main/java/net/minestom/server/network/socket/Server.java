@@ -98,7 +98,6 @@ public final class Server {
             socket.setReceiveBufferSize(ServerFlag.SOCKET_RECEIVE_BUFFER_SIZE);
             socket.setTcpNoDelay(ServerFlag.SOCKET_NO_DELAY);
             socket.setSoTimeout(ServerFlag.SOCKET_TIMEOUT);
-            channel.configureBlocking(false);
         }
     }
 
