@@ -512,10 +512,10 @@ final class ServerProcessImpl implements ServerProcess {
             dispatcher().updateAndAwait(nanoStart);
 
             // Clear removed entities & update threads
-            final long tickDuration = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - nanoStart);
+            final long tickDuration = System.nanoTime() - nanoStart;
             final long remainingTickDuration = Tick.SERVER_TICKS.getDuration().toNanos() - tickDuration;
             // the nanoTimeout for refreshThreads is the remaining tick duration
-            dispatcher().refreshThreads(remainingTickDuration);
+            dispatcher().refreshThreads(Math.max(0L, remainingTickDuration));
         }
     }
 }
