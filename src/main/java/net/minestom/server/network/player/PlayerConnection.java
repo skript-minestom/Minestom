@@ -194,11 +194,6 @@ public abstract class PlayerConnection {
         return online;
     }
 
-    @ApiStatus.Internal
-    public void UNSAFE_setOnline(boolean online) {
-        this.online = online;
-    }
-
     /**
      * @deprecated Use {@link #getClientState()} or {@link #getServerState()} instead.
      */
