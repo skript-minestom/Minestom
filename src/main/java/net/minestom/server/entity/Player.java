@@ -1219,7 +1219,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
     }
 
     /**
-     * Sets the tab-list listing priority of the player. This is also affected by other factors such as: whether the
+     * Sets the tab-list listing order of the player. This is also affected by other factors such as: whether the
      * player is spectating, their team name, and their username.
      * <p>
      * More information can be found <a href="https://minecraft.wiki/w/Java_Edition_protocol/Packets#player-info:player-actions">here</a>.
