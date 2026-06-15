@@ -2,7 +2,6 @@ package net.minestom.server.entity;
 
 import it.unimi.dsi.fastutil.longs.LongArrayPriorityQueue;
 import it.unimi.dsi.fastutil.longs.LongPriorityQueue;
-import net.kyori.adventure.audience.MessageType;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.dialog.DialogLike;
 import net.kyori.adventure.identity.Identity;
@@ -33,7 +32,6 @@ import net.minestom.server.command.CommandSender;
 import net.minestom.server.component.DataComponents;
 import net.minestom.server.coordinate.*;
 import net.minestom.server.dialog.Dialog;
-import net.minestom.server.entity.attribute.Attribute;
 import net.minestom.server.entity.metadata.LivingEntityMeta;
 import net.minestom.server.entity.metadata.avatar.PlayerMeta;
 import net.minestom.server.entity.vehicle.PlayerInputs;
@@ -44,7 +42,10 @@ import net.minestom.server.event.item.ItemDropEvent;
 import net.minestom.server.event.item.PickupExperienceEvent;
 import net.minestom.server.event.item.PlayerFinishItemUseEvent;
 import net.minestom.server.event.player.*;
-import net.minestom.server.instance.*;
+import net.minestom.server.instance.Chunk;
+import net.minestom.server.instance.EntityTracker;
+import net.minestom.server.instance.Instance;
+import net.minestom.server.instance.SharedInstance;
 import net.minestom.server.instance.block.Block;
 import net.minestom.server.inventory.AbstractInventory;
 import net.minestom.server.inventory.Inventory;
@@ -143,7 +144,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
     private volatile int latency;
     private Component displayName;
     private boolean listed = true;
-    private int listPriority;
+    private int listOrder;
     private PlayerSkin skin;
 
     private Instance pendingInstance = null;
@@ -199,7 +200,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
 
     private long startItemUseTime;
     private long itemUseTime;
-    private PlayerHand itemUseHand;
+    private @Nullable PlayerHand itemUseHand;
 
     // Game state (https://minecraft.wiki/w/Minecraft_Wiki:Projects/wiki.vg_merge/Protocol#Game_Event)
     private boolean enableRespawnScreen;
@@ -253,7 +254,6 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
         this.gameMode = GameMode.SURVIVAL;
         this.dimensionTypeId = DIMENSION_TYPE_REGISTRY.getId(DimensionType.OVERWORLD); // Default dimension
         this.levelFlat = true;
-        getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.1);
 
         // FakePlayer init its connection there
         playerConnectionInit();
@@ -328,9 +328,6 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
         for (var player : connectionManager.getOnlinePlayers()) {
             if (player != this) {
                 sendPacket(player.getAddPlayerToList());
-                if (player.displayName != null) {
-                    sendPacket(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME, player.infoEntry()));
-                }
             }
         }
 
@@ -531,6 +528,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
         sendPacket(new SetExperiencePacket(exp, level, 0));
         triggerStatus((byte) (EntityStatuses.Player.PERMISSION_LEVEL_0 + permissionLevel)); // Set permission level
         refreshAbilities();
+        sendPacket(instance.createTimePacket());
     }
 
     /**
@@ -564,11 +562,8 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
 
         if (permanent) {
             this.packets.clear();
-            //noinspection ConstantValue
-            if (instance != null) {
-                EventDispatcher.call(new PlayerDisconnectEvent(this));
-                EventsJFR.newPlayerLeave(getUuid()).commit();
-            }
+            EventDispatcher.call(new PlayerDisconnectEvent(this));
+            EventsJFR.newPlayerLeave(getUuid()).commit();
         }
 
         final AbstractInventory currentInventory = getOpenInventory();
@@ -637,13 +632,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
         // Ensure that surrounding chunks are loaded
         List<CompletableFuture<Chunk>> futures = new ArrayList<>();
         ChunkRange.chunksInRange(spawnPosition, this.effectiveViewDistance(), (chunkX, chunkZ) -> {
-            final CompletableFuture<Chunk> future = instance.loadOptionalChunk(chunkX, chunkZ).whenComplete((chunk, throwable) -> {
-                if (throwable != null || chunk != null) return;
-                sendPacket(new BundlePacket());
-                sendPacket(ChunkDataPacket.getEmpty(instance, chunkX, chunkZ, instance.getChunkSupplier()));
-                sendPacket(new UnloadChunkPacket(chunkX, chunkZ));
-                sendPacket(new BundlePacket());
-            });
+            final CompletableFuture<Chunk> future = instance.loadOptionalChunk(chunkX, chunkZ);
             if (!future.isDone()) futures.add(future);
         });
         if (futures.isEmpty()) {
@@ -908,10 +897,8 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
     }
 
     @Override
-    @SuppressWarnings({"UnstableApiUsage", "deprecation"})
-    public void sendMessage(final Identity source, final Component message, final MessageType type) {
-        // Note to readers: this method may be deprecated, however it is in fact required.
-        Messenger.sendMessage(this, message, ChatPosition.fromMessageType(type), source.uuid());
+    public void sendMessage(Component message) {
+        Messenger.sendMessage(this, message, ChatPosition.SYSTEM_MESSAGE);
     }
 
     /**
@@ -1194,7 +1181,9 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
      */
     public void setDisplayName(@Nullable Component displayName) {
         this.displayName = displayName;
-        PacketSendingUtils.broadcastPlayPacket(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME, infoEntry()));
+        if (isActive()) {
+            PacketSendingUtils.broadcastPlayPacket(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME, infoEntry()));
+        }
     }
 
     /**
@@ -1213,18 +1202,20 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
      */
     public void setListed(boolean listed) {
         this.listed = listed;
-        PacketSendingUtils.broadcastPlayPacket(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_LISTED, infoEntry()));
+        if (isActive()) {
+            PacketSendingUtils.broadcastPlayPacket(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_LISTED, infoEntry()));
+        }
     }
 
     /**
-     * Gets the tab-list listing priority of the player.
+     * Gets the tab-list listing order of the player.
      * <p>
-     * See {@link Player#setListPriority(int)} for further documentation.
+     * See {@link Player#setListOrder(int)} for further documentation.
      *
-     * @return the priority the player has for the tab-list
+     * @return the order the player has for the tab-list
      */
-    public int getListPriority() {
-        return listPriority;
+    public int getListOrder() {
+        return listOrder;
     }
 
     /**
@@ -1233,12 +1224,14 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
      * <p>
      * More information can be found <a href="https://minecraft.wiki/w/Java_Edition_protocol/Packets#player-info:player-actions">here</a>.
      *
-     * @param listPriority the priority in which the player should be displayed in the tab-list. A higher priority means
-     *                     the player will appear higher in the tab-list.
+     * @param listOrder the order in which the player should be displayed in the tab-list. A higher number means
+     *                  the player will appear higher in the tab-list.
      */
-    public void setListPriority(int listPriority) {
-        this.listPriority = listPriority;
-        PacketSendingUtils.broadcastPlayPacket(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_LIST_PRIORITY, infoEntry()));
+    public void setListOrder(int listOrder) {
+        this.listOrder = listOrder;
+        if (isActive()) {
+            PacketSendingUtils.broadcastPlayPacket(new PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.UPDATE_LIST_ORDER, infoEntry()));
+        }
     }
 
     /**
@@ -1383,7 +1376,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
 
     @Override
     public void clearResourcePacks() {
-        sendPacket(new ResourcePackPopPacket((UUID) null));
+        sendPacket(new ResourcePackPopPacket(null));
     }
 
     /**
@@ -2295,7 +2288,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
     }
 
     /**
-     * Gets the packet to add the player from the tab-list.
+     * Gets the packet to add the player.
      *
      * @return a {@link PlayerInfoUpdatePacket} to add the player
      */
@@ -2304,7 +2297,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
     }
 
     /**
-     * Gets the packet to remove the player from the tab-list.
+     * Gets the packet to remove the player.
      *
      * @return a {@link PlayerInfoRemovePacket} to remove the player
      */
@@ -2319,7 +2312,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
                 List.of();
         byte hatIndex = ((MetadataDef.Entry.BitMask) MetadataDef.Player.IS_HAT_ENABLED).bitMask();
         return new PlayerInfoUpdatePacket.Entry(getUuid(), getUsername(), prop,
-                listed, getLatency(), getGameMode(), displayName, null, listPriority, (settings.displayedSkinParts() & hatIndex) == hatIndex);
+                listed, getLatency(), getGameMode(), displayName, null, listOrder, (settings.displayedSkinParts() & hatIndex) == hatIndex);
     }
 
     /**
@@ -2448,6 +2441,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
 
     /**
      * Gets the client's 'effective' view distance, which is the minimum of the client's view distance settings, and the local instance settings, plus one
+     *
      * @return The effective chunk view distance range of the client
      */
     public int effectiveViewDistance() {

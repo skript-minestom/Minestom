@@ -39,7 +39,7 @@ final class NetworkBufferImpl implements NetworkBuffer {
     private BinaryTagReader nbtReader;
 
     final @Nullable AutoResize autoResize;
-    final @Nullable Registries registries;
+    @Nullable Registries registries;
 
     ByteBuffer nioBuffer = null;
 
@@ -102,7 +102,7 @@ final class NetworkBufferImpl implements NetworkBuffer {
     }
 
     @Override
-    public void copyTo(long srcOffset, byte [] dest, long destOffset, long length) {
+    public void copyTo(long srcOffset, byte[] dest, long destOffset, long length) {
         assertDummy();
         assertOverflow(srcOffset + length);
         assertOverflow(destOffset + length);
@@ -113,7 +113,7 @@ final class NetworkBufferImpl implements NetworkBuffer {
         UNSAFE.copyMemory(null, address + srcOffset, dest, BYTE_ARRAY_OFFSET + destOffset, length);
     }
 
-    public byte [] extractBytes(Consumer<NetworkBuffer> extractor) {
+    public byte[] extractBytes(Consumer<NetworkBuffer> extractor) {
         assertDummy();
         final long startingPosition = readIndex();
         extractor.accept(this);
@@ -328,6 +328,9 @@ final class NetworkBufferImpl implements NetworkBuffer {
         try {
             inflater.setInput(input);
             final int bytes = inflater.inflate(outputBuffer);
+            if (!inflater.finished()) {
+                throw new DataFormatException("Decompressed payload exceeds output capacity");
+            }
             output.advanceWrite(bytes);
             return bytes;
         } finally {
@@ -339,6 +342,11 @@ final class NetworkBufferImpl implements NetworkBuffer {
     @Override
     public @Nullable Registries registries() {
         return registries;
+    }
+
+    @Override
+    public void registries(@Nullable Registries registries) {
+        this.registries = registries;
     }
 
     private ByteBuffer bufferSlice(int position, int length) {
@@ -470,7 +478,7 @@ final class NetworkBufferImpl implements NetworkBuffer {
         return Double.longBitsToDouble(longValue);
     }
 
-    static NetworkBuffer wrap(byte [] bytes, long readIndex, long writeIndex, @Nullable Registries registries) {
+    static NetworkBuffer wrap(byte[] bytes, long readIndex, long writeIndex, @Nullable Registries registries) {
         var buffer = new Builder(bytes.length).registry(registries).build();
         buffer.writeAt(0, NetworkBuffer.RAW_BYTES, bytes);
         buffer.index(readIndex, writeIndex);
@@ -587,6 +595,7 @@ final class NetworkBufferImpl implements NetworkBuffer {
 
     private static void assertOverflow(long value) {
         try {
+            //noinspection ResultOfMethodCallIgnored
             Math.toIntExact(value); // Check if long is within the bounds of an int
         } catch (ArithmeticException e) {
             throw new RuntimeException("Method does not support long values: " + value);
