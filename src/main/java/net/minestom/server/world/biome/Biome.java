@@ -21,14 +21,9 @@ public sealed interface Biome extends Biomes permits BiomeImpl {
             "attributes", EnvironmentAttributeMap.CODEC.optional(EnvironmentAttributeMap.EMPTY), Biome::attributes,
             "effects", BiomeEffects.CODEC, Biome::effects,
             Biome::create);
-    Codec<Biome> NETWORK_CODEC = StructCodec.struct(
-            "has_precipitation", Codec.BOOLEAN, Biome::hasPrecipitation,
-            "temperature", Codec.FLOAT, Biome::temperature,
-            "temperature_modifier", TemperatureModifier.CODEC.optional(TemperatureModifier.NONE), Biome::temperatureModifier,
-            "downfall", Codec.FLOAT, Biome::downfall,
-            "attributes", EnvironmentAttributeMap.NETWORK_CODEC.optional(EnvironmentAttributeMap.EMPTY), Biome::attributes,
-            "effects", BiomeEffects.CODEC, Biome::effects,
-            Biome::create);
+    // We dont currently read generation or mob spawn settings. If we do, we will need
+    // to have a separate network codec which does not serialize those fields.
+    Codec<Biome> NETWORK_CODEC = REGISTRY_CODEC;
 
     static Biome create(
             boolean hasPrecipitation,

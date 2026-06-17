@@ -23,31 +23,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import static net.minestom.server.world.attribute.EnvironmentAttribute.isExcludedFromNetworkRegistry;
 
 public sealed interface Timeline extends Timelines permits TimelineImpl {
     @SuppressWarnings({"unchecked", "rawtypes"})
     Codec<Map<EnvironmentAttribute<?>, Track<?, ?>>> TRACKS_CODEC = EnvironmentAttribute.CODEC
             .mapValueTyped(attribute -> (Codec) Track.codec(attribute), true);
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    Codec<Map<EnvironmentAttribute<?>, Track<?, ?>>> NETWORK_TRACKS_CODEC = TRACKS_CODEC.transform(
-            map -> map,
-            map -> map.entrySet().stream()
-                    .filter(entry -> !isExcludedFromNetworkRegistry(entry.getKey()))
-                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
-    );
     Codec<Timeline> REGISTRY_CODEC = StructCodec.struct(
             "clock", WorldClock.CODEC, Timeline::clock,
             "period_ticks", Codec.INT.optional(), Timeline::periodTicks,
             "tracks", TRACKS_CODEC.optional(Map.of()), Timeline::tracks,
-            "time_markers", ClockTimeMarker.CODEC.mapValue(TimeMarkerInfo.REGISTRY_CODEC).optional(Map.of()), Timeline::timeMarkers,
-            Timeline::create);
-    Codec<Timeline> NETWORK_CODEC = StructCodec.struct(
-            "clock", WorldClock.CODEC, Timeline::clock,
-            "period_ticks", Codec.INT.optional(), Timeline::periodTicks,
-            "tracks", NETWORK_TRACKS_CODEC.optional(Map.of()), Timeline::tracks,
             "time_markers", ClockTimeMarker.CODEC.mapValue(TimeMarkerInfo.REGISTRY_CODEC).optional(Map.of()), Timeline::timeMarkers,
             Timeline::create);
 
@@ -76,7 +60,7 @@ public sealed interface Timeline extends Timelines permits TimelineImpl {
     @ApiStatus.Internal
     static DynamicRegistry<Timeline> createDefaultRegistry(Registries registries) {
         return DynamicRegistry.create(Key.key("timeline"),
-                NETWORK_CODEC, registries, RegistryData.Resource.TIMELINES, null, REGISTRY_CODEC);
+                REGISTRY_CODEC, registries, RegistryData.Resource.TIMELINES);
     }
 
     record Track<T, Arg>(
