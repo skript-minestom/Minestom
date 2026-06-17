@@ -12,6 +12,7 @@ import net.minestom.server.world.MoonPhase;
 import net.minestom.server.world.attribute.EnvironmentAttribute.Type;
 
 import java.util.List;
+import java.util.Set;
 
 import static net.minestom.server.world.attribute.EnvironmentAttributeImpl.register;
 
@@ -66,4 +67,14 @@ sealed interface EnvironmentAttributes permits EnvironmentAttribute {
     EnvironmentAttribute<EntityActivity> BABY_VILLAGER_ACTIVITY = register("gameplay/baby_villager_activity", Type.ACTIVITY, EntityActivity.IDLE);
 
     Codec<EnvironmentAttribute<?>> CODEC = EnvironmentAttributeImpl.CODEC;
+
+    /// Attributes introduced in 26.1 that are not present on 1.21.11 clients. Omitted from registry network payloads.
+    Set<EnvironmentAttribute<?>> NETWORK_REGISTRY_EXCLUDED = Set.of(
+            BLOCK_LIGHT_TINT,
+            NIGHT_VISION_COLOR,
+            AMBIENT_LIGHT_COLOR,
+            FIREFLY_BUSH_SOUNDS,
+            CREAKING_ACTIVE,
+            EYEBLOSSOM_OPEN
+    );
 }

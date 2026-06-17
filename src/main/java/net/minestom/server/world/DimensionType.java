@@ -40,6 +40,26 @@ public sealed interface DimensionType extends DimensionTypes permits DimensionTy
             "default_clock", WorldClock.CODEC.optional(), DimensionType::defaultClock,
             DimensionType::create);
 
+    Codec<DimensionType> NETWORK_CODEC = StructCodec.struct(
+            "has_fixed_time", Codec.BOOLEAN.optional(false), DimensionType::hasFixedTime,
+            "has_skylight", Codec.BOOLEAN, DimensionType::hasSkylight,
+            "has_ceiling", Codec.BOOLEAN, DimensionType::hasCeiling,
+            "has_ender_dragon_fight", Codec.BOOLEAN, DimensionType::hasEnderDragonFight,
+            "coordinate_scale", Codec.DOUBLE, DimensionType::coordinateScale,
+            "min_y", Codec.INT, DimensionType::minY,
+            "height", Codec.INT, DimensionType::height,
+            "logical_height", Codec.INT, DimensionType::logicalHeight,
+            "infiniburn", Codec.STRING, DimensionType::infiniburn,
+            "ambient_light", Codec.FLOAT, DimensionType::ambientLight,
+            "monster_spawn_light_level", IntProvider.CODEC, DimensionType::monsterSpawnLightLevel,
+            "monster_spawn_block_light_limit", Codec.INT, DimensionType::monsterSpawnBlockLightLimit,
+            "skybox", Skybox.CODEC.optional(Skybox.OVERWORLD), DimensionType::skybox,
+            "cardinal_light", CardinalLight.CODEC.optional(CardinalLight.DEFAULT), DimensionType::cardinalLight,
+            "attributes", EnvironmentAttributeMap.NETWORK_CODEC.optional(EnvironmentAttributeMap.EMPTY), DimensionType::attributes,
+            "timelines", RegistryTag.codec(Registries::timeline).optional(RegistryTag.empty()), DimensionType::timelines,
+            "default_clock", WorldClock.CODEC.optional(), DimensionType::defaultClock,
+            DimensionType::create);
+
     static DimensionType create(
             boolean hasFixedTime, boolean hasSkyLight, boolean hasCeiling, boolean hasEnderDragonFight,
             double coordinateScale, int minY, int height, int logicalHeight,
@@ -71,7 +91,7 @@ public sealed interface DimensionType extends DimensionTypes permits DimensionTy
     @ApiStatus.Internal
     static DynamicRegistry<DimensionType> createDefaultRegistry(Registries registries) {
         return DynamicRegistry.create(Key.key("dimension_type"),
-                REGISTRY_CODEC, registries, RegistryData.Resource.DIMENSION_TYPES);
+                NETWORK_CODEC, registries, RegistryData.Resource.DIMENSION_TYPES, null, REGISTRY_CODEC);
     }
 
     boolean hasFixedTime();
