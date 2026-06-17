@@ -22,6 +22,10 @@ public sealed interface EnvironmentAttribute<T> extends EnvironmentAttributes pe
         return EnvironmentAttributeImpl.REGISTRY.values();
     }
 
+    static boolean isExcludedFromNetworkRegistry(EnvironmentAttribute<?> attribute) {
+        return EnvironmentAttributes.NETWORK_REGISTRY_EXCLUDED.contains(attribute);
+    }
+
     sealed interface Type<T> extends EnvironmentAttributeTypes permits EnvironmentAttributeTypeImpl {
 
         Codec<T> codec();

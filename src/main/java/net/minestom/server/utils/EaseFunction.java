@@ -1,5 +1,6 @@
 package net.minestom.server.utils;
 
+import net.kyori.adventure.key.Key;
 import net.minestom.server.codec.Codec;
 import net.minestom.server.codec.StructCodec;
 import net.minestom.server.coordinate.Vec;
@@ -74,9 +75,20 @@ public interface EaseFunction {
     );
     Map<EaseFunction, String> NAMED_BY_VALUE = NAMED_BY_KEY.entrySet().stream()
             .collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey));
-    Codec<EaseFunction> CODEC = Codec.Either(Codec.STRING.transform(NAMED_BY_KEY::get, NAMED_BY_VALUE::get), CubicBezier.CODEC)
-            .transform(either -> either.unify(f -> f, f -> f),
-                    f -> f instanceof CubicBezier bezier ? Either.right(bezier) : Either.left(f));
+
+    Codec<EaseFunction> CODEC = Codec.Either(
+            Codec.STRING.transform(EaseFunction::decodeNamed, NAMED_BY_VALUE::get),
+            CubicBezier.CODEC
+    ).transform(
+            either -> either.unify(f -> f, f -> f),
+            f -> f instanceof CubicBezier bezier ? Either.right(bezier) : Either.left(f)
+    );
+
+    private static EaseFunction decodeNamed(String name) {
+        final EaseFunction ease = NAMED_BY_KEY.get(Key.key(name).value());
+        if (ease == null) throw new IllegalArgumentException("Unknown ease function: " + name);
+        return ease;
+    }
 
     float sample(float value);
 

@@ -14,9 +14,10 @@ record EnvironmentAttributeImpl<T>(
 ) implements EnvironmentAttribute<T> {
     public static final DynamicRegistry<EnvironmentAttribute<?>> REGISTRY =
             DynamicRegistry.create(Key.key("environment_attribute"));
-    public static final Codec<EnvironmentAttribute<?>> CODEC = Codec.KEY.transform(
-            key -> Objects.requireNonNull(REGISTRY.get(key), () -> "no such environment attribute: " + key),
-            EnvironmentAttribute::key);
+    // Registry map keys use the attribute path only (e.g. visual/fog_color), not minecraft:visual/fog_color.
+    public static final Codec<EnvironmentAttribute<?>> CODEC = Codec.STRING.transform(
+            s -> Objects.requireNonNull(REGISTRY.get(Key.key(s)), () -> "no such environment attribute: " + s),
+            attribute -> attribute.key().value());
 
     static <T> EnvironmentAttribute<T> register(
             @KeyPattern String key,

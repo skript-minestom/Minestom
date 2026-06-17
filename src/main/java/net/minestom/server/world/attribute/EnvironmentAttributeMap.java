@@ -1,12 +1,17 @@
 package net.minestom.server.world.attribute;
 
 import net.minestom.server.codec.Codec;
+import net.minestom.server.codec.Result;
 import net.minestom.server.codec.StructCodec;
+import net.minestom.server.codec.Transcoder;
 import net.minestom.server.utils.Either;
 import net.minestom.server.world.attribute.EnvironmentAttribute.Modifier;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
+
+import static net.minestom.server.world.attribute.EnvironmentAttribute.isExcludedFromNetworkRegistry;
 
 public record EnvironmentAttributeMap(Map<EnvironmentAttribute<?>, Entry<?, ?>> entries) {
     public static final EnvironmentAttributeMap EMPTY = new EnvironmentAttributeMap(Map.of());
@@ -14,6 +19,22 @@ public record EnvironmentAttributeMap(Map<EnvironmentAttribute<?>, Entry<?, ?>> 
     public static final Codec<EnvironmentAttributeMap> CODEC = EnvironmentAttribute.CODEC
             .mapValueTyped(Entry::codec0, true)
             .transform(EnvironmentAttributeMap::new, EnvironmentAttributeMap::entries);
+
+    public static final Codec<EnvironmentAttributeMap> NETWORK_CODEC = new Codec<>() {
+        @Override
+        public <D> Result<EnvironmentAttributeMap> decode(Transcoder<D> coder, D value) {
+            return CODEC.decode(coder, value);
+        }
+
+        @Override
+        public <D> Result<D> encode(Transcoder<D> coder, EnvironmentAttributeMap value) {
+            if (value.entries().isEmpty()) return CODEC.encode(coder, value);
+            Map<EnvironmentAttribute<?>, Entry<?, ?>> filtered = value.entries().entrySet().stream()
+                    .filter(entry -> !isExcludedFromNetworkRegistry(entry.getKey()))
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+            return CODEC.encode(coder, new EnvironmentAttributeMap(filtered));
+        }
+    };
 
     public static Builder builder() {
         return new Builder();
