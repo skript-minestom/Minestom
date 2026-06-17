@@ -261,7 +261,7 @@ final class DynamicRegistryImpl<T> implements DynamicRegistry<T> {
 
     private RegistryDataPacket createRegistryDataPacket(Registries registries, boolean excludeVanilla) {
         Objects.requireNonNull(codec, "Cannot create registry data packet for server-only registry");
-        Transcoder<BinaryTag> transcoder = new RegistryTranscoder<>(Transcoder.NBT, registries);
+        Transcoder<BinaryTag> transcoder = new RegistryTranscoder<>(Transcoder.NBT, registries, true, false);
         // Copy to avoid concurrent modification issues while iterating, as we are not synchronized on the registry
         final List<T> idToValue;
         final List<DataPack> packById;
