@@ -1,20 +1,19 @@
 package net.minestom.server.world.timeline;
 
-import net.kyori.adventure.key.Key;
 import net.minestom.server.codec.Codec;
 import net.minestom.server.codec.StructCodec;
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.registry.BuiltinRegistries;
 import net.minestom.server.registry.DynamicRegistry;
 import net.minestom.server.registry.Registries;
-import net.minestom.server.registry.RegistryData;
 import net.minestom.server.registry.RegistryKey;
 import net.minestom.server.utils.EaseFunction;
 import net.minestom.server.utils.Either;
 import net.minestom.server.utils.validate.Check;
-import net.minestom.server.world.clock.ClockTimeMarker;
-import net.minestom.server.world.clock.WorldClock;
 import net.minestom.server.world.attribute.EnvironmentAttribute;
 import net.minestom.server.world.attribute.EnvironmentAttribute.Modifier;
+import net.minestom.server.world.clock.ClockTimeMarker;
+import net.minestom.server.world.clock.WorldClock;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnknownNullability;
@@ -23,31 +22,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import static net.minestom.server.world.attribute.EnvironmentAttribute.isExcludedFromNetworkRegistry;
 
 public sealed interface Timeline extends Timelines permits TimelineImpl {
     @SuppressWarnings({"unchecked", "rawtypes"})
     Codec<Map<EnvironmentAttribute<?>, Track<?, ?>>> TRACKS_CODEC = EnvironmentAttribute.CODEC
             .mapValueTyped(attribute -> (Codec) Track.codec(attribute), true);
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    Codec<Map<EnvironmentAttribute<?>, Track<?, ?>>> NETWORK_TRACKS_CODEC = TRACKS_CODEC.transform(
-            map -> map,
-            map -> map.entrySet().stream()
-                    .filter(entry -> !isExcludedFromNetworkRegistry(entry.getKey()))
-                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
-    );
     Codec<Timeline> REGISTRY_CODEC = StructCodec.struct(
             "clock", WorldClock.CODEC, Timeline::clock,
             "period_ticks", Codec.INT.optional(), Timeline::periodTicks,
             "tracks", TRACKS_CODEC.optional(Map.of()), Timeline::tracks,
-            "time_markers", ClockTimeMarker.CODEC.mapValue(TimeMarkerInfo.REGISTRY_CODEC).optional(Map.of()), Timeline::timeMarkers,
-            Timeline::create);
-    Codec<Timeline> NETWORK_CODEC = StructCodec.struct(
-            "clock", WorldClock.CODEC, Timeline::clock,
-            "period_ticks", Codec.INT.optional(), Timeline::periodTicks,
-            "tracks", NETWORK_TRACKS_CODEC.optional(Map.of()), Timeline::tracks,
             "time_markers", ClockTimeMarker.CODEC.mapValue(TimeMarkerInfo.REGISTRY_CODEC).optional(Map.of()), Timeline::timeMarkers,
             Timeline::create);
 
@@ -75,8 +58,7 @@ public sealed interface Timeline extends Timelines permits TimelineImpl {
     /// @see net.minestom.server.MinecraftServer to get an existing instance of the registry
     @ApiStatus.Internal
     static DynamicRegistry<Timeline> createDefaultRegistry(Registries registries) {
-        return DynamicRegistry.create(Key.key("timeline"),
-                NETWORK_CODEC, registries, RegistryData.Resource.TIMELINES, null, REGISTRY_CODEC);
+        return DynamicRegistry.create(BuiltinRegistries.TIMELINE, REGISTRY_CODEC, registries);
     }
 
     record Track<T, Arg>(
