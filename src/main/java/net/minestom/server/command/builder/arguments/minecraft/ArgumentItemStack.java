@@ -53,7 +53,7 @@ public class ArgumentItemStack extends Argument<ItemStack> {
         // Parse the declared components
         if (reader.peek() == '[') {
             reader.consume('[');
-            final Transcoder<BinaryTag> coder = new RegistryTranscoder<>(Transcoder.NBT, MinecraftServer.process());
+            final Transcoder<BinaryTag> coder = new RegistryTranscoder<>(Transcoder.NBT, MinecraftServer.getRegistries());
             do {
                 final boolean remove = reader.peek() == '!';
                 if (remove)
