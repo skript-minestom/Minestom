@@ -47,13 +47,17 @@ public class DynamicChunk extends Chunk {
 
     private volatile boolean needsCompleteHeightmapRefresh = true;
 
+    @SuppressWarnings("this-escape") // deliberate self registration during construction
     protected Heightmap motionBlocking = new MotionBlockingHeightmap(this);
+    @SuppressWarnings("this-escape") // deliberate self registration during construction
     protected Heightmap worldSurface = new WorldSurfaceHeightmap(this);
 
     // Key = ChunkUtils#getBlockIndex
     protected final Int2ObjectOpenHashMap<Block> entries = new Int2ObjectOpenHashMap<>(0);
+    @SuppressWarnings("this-escape") // deliberate self registration during construction
     protected final Int2ObjectOpenHashMap<Block> tickableMap = new Int2ObjectOpenHashMap<>(0);
 
+    @SuppressWarnings("this-escape") // deliberate self registration during construction
     final CachedPacket chunkCache = new CachedPacket(this::createChunkPacket);
 
     public DynamicChunk(Instance instance, int chunkX, int chunkZ) {
@@ -99,7 +103,7 @@ public class DynamicChunk extends Chunk {
         // Handler
         final BlockHandler handler = block.handler();
         final Block lastCachedBlock;
-        if (handler != null || block.hasNbt() || block.registry().isBlockEntity()) {
+        if (handler != null || block.hasNbt() || block.blockEntityType() != null) {
             lastCachedBlock = this.entries.put(index, block);
         } else {
             lastCachedBlock = this.entries.remove(index);
@@ -137,7 +141,7 @@ public class DynamicChunk extends Chunk {
         this.chunkCache.invalidate();
         Section section = getSectionAt(y);
 
-        var id = instance.registries().biome().getId(biome);
+        final int id = instance.registries().biome().getId(biome);
         if (id == -1) throw new IllegalStateException("Biome has not been registered: " + biome.key());
 
         section.biomePalette().set(
@@ -296,7 +300,7 @@ public class DynamicChunk extends Chunk {
 
     private static boolean isFluid(int blockStateId) {
         final Block block = Block.fromStateId(blockStateId);
-        return block != null && block.isFluid();
+        return block != null && block.fluid();
     }
 
     UpdateLightPacket createLightPacket() {
