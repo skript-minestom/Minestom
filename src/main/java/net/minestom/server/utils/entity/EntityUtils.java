@@ -16,15 +16,15 @@ public final class EntityUtils {
      * Gets the position offset at which a passenger rides the given vehicle.
      *
      * @param vehicle the target vehicle
-     * @param passenger the target passenger
+     * @param passengerType the {@link EntityType} of the target passenger
      * @param passengerIndex the index of the passenger in the vehicle's passenger list
      * @return the height offset for the passenger of this vehicle
      */
-    public static Point getPassengerPositionOffset(Entity vehicle, Entity passenger, int passengerIndex) {
+    public static Point getPassengerPositionOffset(Entity vehicle, EntityType passengerType, int passengerIndex) {
         // Special cases: Boats, Rafts, Camel, Happy Ghast
         EntityType vehicleType = vehicle.getEntityType();
         if (vehicleType == EntityType.CAMEL || vehicleType == EntityType.CAMEL_HUSK) {
-            Vec vehicleOffset = firstAttachmentOrDefault(passenger.getEntityType(), "VEHICLE", Vec.ZERO);
+            Vec vehicleOffset = firstAttachmentOrDefault(passengerType, "VEHICLE", Vec.ZERO);
             // Check pose
             boolean isSitting = vehicle.getPose() == EntityPose.SITTING;
             boolean isBaby = vehicle.getEntityMeta() instanceof CamelMeta camelMeta && camelMeta.isBaby();
@@ -40,7 +40,7 @@ public final class EntityUtils {
                 }
             }
 
-            double animalOffset = ANIMALS.contains(passenger.getEntityType()) ? 0.2 : 0;
+            double animalOffset = ANIMALS.contains(passengerType) ? 0.2 : 0;
             if (passengerIndex == 0) {
                 return new Vec(0, height, 0.5 + animalOffset).sub(vehicleOffset).rotateAroundY(Math.toRadians(vehicle.getPosition().yaw() * -1));
             } else {
@@ -50,11 +50,11 @@ public final class EntityUtils {
             List<Vec> positions = vehicleType.entityAttachments("PASSENGER");
             Vec passengerOffset = positions != null && !positions.isEmpty()
                     ? positions.get(Math.min(passengerIndex, positions.size() - 1)) : Vec.ZERO;
-            Vec vehicleOffset = firstAttachmentOrDefault(passenger.getEntityType(), "VEHICLE", Vec.ZERO);
+            Vec vehicleOffset = firstAttachmentOrDefault(passengerType, "VEHICLE", Vec.ZERO);
             return passengerOffset.sub(vehicleOffset).rotateAroundY(Math.toRadians(-vehicle.getPosition().yaw()));
         } else if (vehicleType.key().value().contains("boat")) {
-            double animalOffset = ANIMALS.contains(passenger.getEntityType()) ? 0.2 : 0;
-            if (CHEST_BOATS.contains(passenger.getEntityType())) {
+            double animalOffset = ANIMALS.contains(passengerType) ? 0.2 : 0;
+            if (CHEST_BOATS.contains(passengerType)) {
                 // Special case: Single passenger
                 if (vehicle.getPassengers().size() == 1) {
                     return new Vec(0, vehicleType.height() / 3f, 0.15).rotateAroundY(Math.toRadians(vehicle.getPosition().yaw() * -1));
@@ -88,7 +88,7 @@ public final class EntityUtils {
             // Passenger position offset is a combination of vehicle passenger position and passenger vehicle position (if it exists)
             Vec passengerOffset = firstAttachmentOrDefault(
                     vehicleType, "PASSENGER", new Vec(0, vehicleType.height(), 0));
-            Vec vehicleOffset = firstAttachmentOrDefault(passenger.getEntityType(), "VEHICLE", Vec.ZERO);
+            Vec vehicleOffset = firstAttachmentOrDefault(passengerType, "VEHICLE", Vec.ZERO);
             return passengerOffset.sub(vehicleOffset).rotateAroundY(Math.toRadians(-vehicle.getPosition().yaw()));
         }
     }

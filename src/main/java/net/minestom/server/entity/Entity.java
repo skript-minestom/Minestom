@@ -1404,14 +1404,14 @@ public class Entity implements Viewable, Tickable, Schedulable, Snapshotable, Ev
     }
 
     /**
-     * Sets the coordinates of the passenger to the coordinates of this vehicle + {@link EntityUtils#getPassengerPositionOffset(Entity, Entity, int)}
+     * Sets the coordinates of the passenger to the coordinates of this vehicle + {@link EntityUtils#getPassengerPositionOffset(Entity, EntityType, int)}
      *
      * @param newPosition the new position of this vehicle
      * @param passenger   the passenger to be moved
      */
     private void updatePassengerPosition(Point newPosition, Entity passenger, int passengerIndex) {
         final Pos oldPassengerPos = passenger.position;
-        final Pos newPassengerPos = passenger.clampPosition(newPosition.add(EntityUtils.getPassengerPositionOffset(this, passenger, passengerIndex)).asPos());
+        final Pos newPassengerPos = passenger.clampPosition(newPosition.add(EntityUtils.getPassengerPositionOffset(this, passenger.entityType, passengerIndex)).asPos());
         passenger.setPositionInternal(newPassengerPos, newPassengerPos.yaw());
         passenger.previousPosition = oldPassengerPos;
         passenger.refreshCoordinate(newPassengerPos);
