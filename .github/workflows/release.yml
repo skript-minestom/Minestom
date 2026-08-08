@@ -20,7 +20,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Gradle pre-run
-        run: ./gradlew determineMinecraftVersion --no-configuration-cache
+        run: ./gradlew determineMinecraftVersion
       - id: version
         name: Determine Version
         run: |
