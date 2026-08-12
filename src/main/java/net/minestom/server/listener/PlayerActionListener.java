@@ -120,7 +120,7 @@ public final class PlayerActionListener {
         return breakBlock(instance, player, blockPosition, playerFinishDiggingEvent.getBlock(), blockFace);
     }
 
-    private static boolean shouldPreventBreaking(Player player, Block block) {
+    public static boolean shouldPreventBreaking(Player player, Block block) {
         final ItemStack itemInMainHand = player.getItemInMainHand();
 
         return switch (player.getGameMode()) {
