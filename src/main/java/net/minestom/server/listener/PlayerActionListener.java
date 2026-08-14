@@ -4,6 +4,7 @@ import net.kyori.adventure.nbt.CompoundBinaryTag;
 import net.minestom.server.component.DataComponents;
 import net.minestom.server.coordinate.Point;
 import net.minestom.server.coordinate.Pos;
+import net.minestom.server.coordinate.Vec;
 import net.minestom.server.entity.Player;
 import net.minestom.server.entity.PlayerHand;
 import net.minestom.server.entity.metadata.LivingEntityMeta;
@@ -193,7 +194,8 @@ public final class PlayerActionListener {
                 final Pos playerPosition = player.getPosition();
                 // Teleport the player back if he broke a solid block just below him
                 if (playerPosition.sub(0, 1, 0).samePoint(blockPosition)) {
-                    var _ = player.teleport(playerPosition);
+                    player.setVelocity(Vec.ZERO);
+                    player.teleport(playerPosition);
                 }
             }
         }
