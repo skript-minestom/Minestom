@@ -448,7 +448,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
         super.update(time); // Super update (item pickup/fire management)
 
         // Experience orb pickup
-        if (experiencePickupCooldown.isReady(time)) {
+        if (gameMode != GameMode.SPECTATOR && !isDead() && experiencePickupCooldown.isReady(time)) {
             experiencePickupCooldown.refreshLastUpdate(time);
             this.instance.getEntityTracker().nearbyEntities(position, expandedBoundingBox.width(),
                     EntityTracker.Target.EXPERIENCE_ORBS, experienceOrb -> {
@@ -1764,6 +1764,11 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
      */
     public GameMode getGameMode() {
         return gameMode;
+    }
+
+    @Override
+    public boolean canPickupItem() {
+        return super.canPickupItem() && gameMode != GameMode.SPECTATOR;
     }
 
     /**
