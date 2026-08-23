@@ -1,11 +1,17 @@
 package net.minestom.server.item;
 
+import net.kyori.adventure.text.Component;
+import net.minestom.server.adventure.MinestomDataComponentValue;
 import net.minestom.server.component.DataComponents;
+import net.minestom.server.network.NetworkBuffer;
 import net.minestom.testing.RegistriesTest;
 import org.junit.jupiter.api.Test;
 
+import static net.minestom.server.network.NetworkBuffer.COMPONENT;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -31,5 +37,17 @@ public class ItemStackRegistriesTest {
         assertFalse(item.components().has(DataComponents.FOOD));
         assertEquals(5, item.components().get(DataComponents.REPAIR_COST));
         assertNull(item.componentPatch().get(DataComponents.FOOD));
+    }
+
+    @Test
+    void asHoverEventWithRemovedComponent() {
+        ItemStack item = ItemStack.of(Material.ALLAY_SPAWN_EGG).without(DataComponents.ENTITY_DATA);
+        var hoverEvent = item.asHoverEvent(showItem -> showItem);
+
+        var dataComponents = hoverEvent.value().dataComponents();
+        assertInstanceOf(MinestomDataComponentValue.Removed.class, dataComponents.get(DataComponents.ENTITY_DATA.key()));
+
+        var comp = Component.text("egg").hoverEvent(hoverEvent);
+        assertDoesNotThrow(() -> NetworkBuffer.makeArray(buffer -> buffer.write(COMPONENT, comp)));
     }
 }
