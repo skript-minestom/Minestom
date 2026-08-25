@@ -90,8 +90,6 @@ public class LivingEntity extends Entity implements EquipmentHandler {
      */
     private int remainingFireTicks;
 
-    private Team team;
-
     private int arrowCount;
     private float health = 1F;
 
@@ -678,32 +676,6 @@ public class LivingEntity extends Entity implements EquipmentHandler {
             properties.add(new EntityAttributesPacket.Property(instance.attribute(), instance.getBaseValue(), instance.modifiers()));
         }
         return new EntityAttributesPacket(getEntityId(), properties);
-    }
-
-    /**
-     * Changes the {@link Team} for the entity.
-     *
-     * @param team The new team
-     */
-    public void setTeam(@Nullable Team team) {
-        if (this.team == team) return;
-        String member = this instanceof Player player ? player.getUsername() : getUuid().toString();
-        if (this.team != null) {
-            this.team.removeMember(member);
-        }
-        this.team = team;
-        if (team != null) {
-            team.addMember(member);
-        }
-    }
-
-    /**
-     * Gets the {@link Team} of the entity.
-     *
-     * @return the {@link Team}
-     */
-    public @Nullable Team getTeam() {
-        return team;
     }
 
     /**

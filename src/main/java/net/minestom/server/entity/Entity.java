@@ -72,6 +72,7 @@ import net.minestom.server.network.packet.server.play.SpawnEntityPacket;
 import net.minestom.server.potion.Potion;
 import net.minestom.server.potion.PotionEffect;
 import net.minestom.server.potion.TimedPotion;
+import net.minestom.server.scoreboard.Team;
 import net.minestom.server.snapshot.EntitySnapshot;
 import net.minestom.server.snapshot.SnapshotImpl;
 import net.minestom.server.snapshot.SnapshotUpdater;
@@ -229,6 +230,8 @@ public class Entity implements Viewable, Tickable, Schedulable, Snapshotable, Ev
     protected EntityMeta entityMeta;
 
     private final List<TimedPotion> effects = new CopyOnWriteArrayList<>();
+
+    private Team team;
 
     // Tick related
     private long ticks;
@@ -1140,6 +1143,32 @@ public class Entity implements Viewable, Tickable, Schedulable, Snapshotable, Ev
 
     protected SetPassengersPacket getPassengersPacket() {
         return new SetPassengersPacket(getEntityId(), passengers.stream().map(Entity::getEntityId).toList());
+    }
+
+    /**
+     * Changes the {@link Team} for the entity.
+     *
+     * @param team The new team
+     */
+    public void setTeam(@Nullable Team team) {
+        if (this.team == team) return;
+        String member = this instanceof Player player ? player.getUsername() : getUuid().toString();
+        if (this.team != null) {
+            this.team.removeMember(member);
+        }
+        this.team = team;
+        if (team != null) {
+            team.addMember(member);
+        }
+    }
+
+    /**
+     * Gets the {@link Team} of the entity.
+     *
+     * @return the {@link Team}
+     */
+    public @Nullable Team getTeam() {
+        return team;
     }
 
     /**
