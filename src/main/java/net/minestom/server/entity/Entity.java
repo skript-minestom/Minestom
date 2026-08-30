@@ -107,6 +107,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -1919,6 +1920,17 @@ public class Entity implements Viewable, Tickable, Schedulable, Snapshotable, Ev
      * @return resulting entity whether there're any, null otherwise.
      */
     public @Nullable Entity getLineOfSightEntity(double range, Predicate<? super Entity> predicate) {
+        return getLineOfSightEntity(range, predicate, false);
+    }
+
+    /**
+     * Gets first entity on the line of sight of the current one that matches the given predicate.
+     *
+     * @param range     max length of the line of sight of the current entity to be checked.
+     * @param predicate optional predicate
+     * @return resulting entity whether there're any, null otherwise.
+     */
+    public @Nullable Entity getLineOfSightEntity(double range, Predicate<? super Entity> predicate, boolean ignoreBlocks) {
         Instance instance = getInstance();
         if (instance == null) {
             return null;
@@ -1929,14 +1941,29 @@ public class Entity implements Viewable, Tickable, Schedulable, Snapshotable, Ev
         final Predicate<Entity> finalPredicate = e -> e != this
                 && e.boundingBox.boundingBoxRayIntersectionCheck(startAsVec, position.direction(), e.position)
                 && predicate.test(e)
-                && CollisionUtils.isLineOfSightReachingShape(instance, currentChunk, start,
-                e.position.withY(e.position.y() + e.getEyeHeight()), e.boundingBox, e.position);
+                && (ignoreBlocks || CollisionUtils.isLineOfSightReachingShape(instance, currentChunk, start,
+                e.position.withY(e.position.y() + e.getEyeHeight()), e.boundingBox, e.position));
 
         Optional<Entity> nearby = instance.getNearbyEntities(position, range).stream()
                 .filter(finalPredicate)
                 .min(Comparator.comparingDouble(e -> e.getDistanceSquared(this)));
 
         return nearby.orElse(null);
+    }
+
+    /**
+     * Gets the target (not-air) block position of the entity.
+     *
+     * @param maxDistance The max distance to scan before returning null
+     * @return The block position targeted by this entity, null if non are found
+     */
+    public @Nullable Point getTargetBlockPosition(double maxDistance) {
+        Iterator<Point> it = new BlockIterator(this, maxDistance);
+        while (it.hasNext()) {
+            final Point position = it.next();
+            if (!getInstance().getBlock(position).air()) return position;
+        }
+        return null;
     }
 
     @Override

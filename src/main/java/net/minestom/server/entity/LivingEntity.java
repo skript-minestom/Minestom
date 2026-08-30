@@ -678,20 +678,6 @@ public class LivingEntity extends Entity implements EquipmentHandler {
         return new EntityAttributesPacket(getEntityId(), properties);
     }
 
-    /**
-     * Gets the target (not-air) block position of the entity.
-     *
-     * @param maxDistance The max distance to scan before returning null
-     * @return The block position targeted by this entity, null if non are found
-     */
-    public @Nullable Point getTargetBlockPosition(int maxDistance) {
-        Iterator<Point> it = new BlockIterator(this, maxDistance);
-        while (it.hasNext()) {
-            final Point position = it.next();
-            if (!getInstance().getBlock(position).air()) return position;
-        }
-        return null;
-    }
 
     /**
      * Gets {@link EntityMeta} of this entity casted to {@link LivingEntityMeta}.

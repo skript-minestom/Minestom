@@ -131,7 +131,7 @@ public class BlockIterator implements Iterator<Point> {
      *                    unloaded chunks. A value of 0 indicates no limit
      */
 
-    public BlockIterator(Pos pos, double yOffset, int maxDistance) {
+    public BlockIterator(Pos pos, double yOffset, double maxDistance) {
         this(pos.asVec(), pos.direction(), yOffset, maxDistance, false);
     }
 
@@ -172,7 +172,7 @@ public class BlockIterator implements Iterator<Point> {
      *                    unloaded chunks. A value of 0 indicates no limit
      */
 
-    public BlockIterator(Entity entity, int maxDistance) {
+    public BlockIterator(Entity entity, double maxDistance) {
         this(entity.getPosition(), entity.getEyeHeight(), maxDistance);
     }
 
