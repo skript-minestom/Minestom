@@ -1,10 +1,10 @@
 package net.minestom.server.network.socket;
 
 import net.minestom.server.MinecraftServer;
-import net.minestom.server.ServerFlag;
 import net.minestom.server.network.packet.PacketParser;
 import net.minestom.server.network.packet.PacketVanilla;
 import net.minestom.server.network.player.PlayerSocketConnection;
+import net.minestom.server.property.ServerProperties;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.UnknownNullability;
 
@@ -14,7 +14,6 @@ import java.net.InetSocketAddress;
 import java.net.ProtocolFamily;
 import java.net.Socket;
 import java.net.SocketAddress;
-import java.net.SocketException;
 import java.net.StandardProtocolFamily;
 import java.net.UnixDomainSocketAddress;
 import java.nio.channels.ClosedChannelException;
@@ -84,7 +83,8 @@ public final class Server {
                 } catch (ClosedChannelException _) {
                     break; // We are exiting, bye bye!
                 } catch (IOException e) {
-                    MinecraftServer.getExceptionManager().handleException(e);
+                    if (!ServerProperties.SUPPRESS_CONNECTION_ACCEPT_ERRORS.get())
+                        MinecraftServer.getExceptionManager().handleException(e);
                     continue;
                 }
 
@@ -97,7 +97,9 @@ public final class Server {
                     reference.set(connection);
                     readThread.start();
                     writeThread.start();
-                } catch (IOException _) {
+                } catch (IOException e) {
+                    if (!ServerProperties.SUPPRESS_CONNECTION_ACCEPT_ERRORS.get())
+                        MinecraftServer.getExceptionManager().handleException(e);
                     try {
                         client.close();
                     } catch (IOException _) {
@@ -111,10 +113,10 @@ public final class Server {
     private static void configureSocket(SocketChannel channel) throws IOException {
         if (channel.getLocalAddress() instanceof InetSocketAddress) {
             Socket socket = channel.socket();
-            socket.setSendBufferSize(ServerFlag.SOCKET_SEND_BUFFER_SIZE);
-            socket.setReceiveBufferSize(ServerFlag.SOCKET_RECEIVE_BUFFER_SIZE);
-            socket.setTcpNoDelay(ServerFlag.SOCKET_NO_DELAY);
-            socket.setSoTimeout(ServerFlag.SOCKET_TIMEOUT);
+            socket.setSendBufferSize(ServerProperties.SOCKET_SEND_BUFFER_SIZE.get());
+            socket.setReceiveBufferSize(ServerProperties.SOCKET_RECEIVE_BUFFER_SIZE.get());
+            socket.setTcpNoDelay(ServerProperties.SOCKET_NO_DELAY.get());
+            socket.setSoTimeout(ServerProperties.SOCKET_TIMEOUT.get());
         }
     }
 
@@ -127,9 +129,13 @@ public final class Server {
             } catch (ClosedChannelException | EOFException _) {
                 connection.disconnect(); // We closed the socket during read, just exit.
                 break;
+            } catch (IOException e) {
+                if (!ServerProperties.SUPPRESS_CONNECTION_IO_ERRORS.get())
+                    MinecraftServer.getExceptionManager().handleException(e);
+                connection.disconnect();
+                break;
             } catch (Throwable e) {
-                boolean isExpected = e instanceof SocketException && e.getMessage().equals("Connection reset");
-                if (!isExpected) MinecraftServer.getExceptionManager().handleException(e);
+                MinecraftServer.getExceptionManager().handleException(e);
                 connection.disconnect();
                 break;
             }
@@ -144,9 +150,12 @@ public final class Server {
                     connection.flushSync();
                 } catch (ClosedChannelException | EOFException _) {
                     connection.disconnect();
+                } catch (IOException e) {
+                    if (!ServerProperties.SUPPRESS_CONNECTION_IO_ERRORS.get())
+                        MinecraftServer.getExceptionManager().handleException(e);
+                    connection.disconnect();
                 } catch (Throwable e) {
-                    boolean isExpected = e instanceof IOException && e.getMessage().equals("Broken pipe");
-                    if (!isExpected) MinecraftServer.getExceptionManager().handleException(e);
+                    MinecraftServer.getExceptionManager().handleException(e);
                     connection.disconnect();
                 }
                 if (!connection.isOnline()) {

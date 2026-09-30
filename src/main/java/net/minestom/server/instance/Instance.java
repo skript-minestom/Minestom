@@ -13,7 +13,6 @@ import net.kyori.adventure.pointer.Pointers;
 import net.kyori.adventure.pointer.PointersSupplier;
 import net.kyori.adventure.sound.Sound;
 import net.minestom.server.MinecraftServer;
-import net.minestom.server.ServerFlag;
 import net.minestom.server.ServerProcess;
 import net.minestom.server.Tickable;
 import net.minestom.server.adventure.AdventurePacketConvertor;
@@ -40,6 +39,7 @@ import net.minestom.server.network.packet.server.ServerPacket;
 import net.minestom.server.network.packet.server.play.BlockActionPacket;
 import net.minestom.server.network.packet.server.play.InitializeWorldBorderPacket;
 import net.minestom.server.network.packet.server.play.SetTimePacket;
+import net.minestom.server.property.ServerProperties;
 import net.minestom.server.registry.Registries;
 import net.minestom.server.registry.RegistryKey;
 import net.minestom.server.snapshot.ChunkSnapshot;
@@ -106,6 +106,9 @@ public abstract class Instance implements Block.Getter, Block.Setter, Biome.Gett
     private final DimensionType cachedDimensionType; // Cached to prevent self-destruction if the registry is changed, and to avoid the lookups.
     private final String dimensionName;
 
+    // Biome blending seed sent to clients
+    private long hashedSeed;
+
     // World border of the instance
     private WorldBorder worldBorder;
     private double targetBorderDiameter;
@@ -132,7 +135,7 @@ public abstract class Instance implements Block.Getter, Block.Setter, Biome.Gett
     @SuppressWarnings("this-escape") // deliberate self registration during construction
     private final ChunkCache blockRetriever = new ChunkCache(this, null, null);
 
-    protected int chunkViewDistance = ServerFlag.CHUNK_VIEW_DISTANCE;
+    protected int chunkViewDistance = ServerProperties.CHUNK_VIEW_DISTANCE.get();
 
     // the uuid of this instance
     protected UUID uuid;
@@ -505,6 +508,20 @@ public abstract class Instance implements Block.Getter, Block.Setter, Biome.Gett
      */
     public String getDimensionName() {
         return dimensionName;
+    }
+
+    /// Returns the seed the client blends biome colors with, `0` by default.
+    public long getHashedSeed() {
+        return hashedSeed;
+    }
+
+    /// Sets the seed the client blends biome colors with, applied to players joining afterwards.
+    ///
+    /// Clients resolve the biome of each block through a seeded zoom, so grass, foliage and water
+    /// colors near a biome border depend on this value. Vanilla sends a SHA-256 hash of the
+    /// world seed.
+    public void setHashedSeed(long hashedSeed) {
+        this.hashedSeed = hashedSeed;
     }
 
     /// Returns the current world age (aka game time) of this Instance.
@@ -902,7 +919,7 @@ public abstract class Instance implements Block.Getter, Block.Setter, Biome.Gett
     }
 
     /**
-     * Gets the chunk view distance of this instance, which defaults to {@link ServerFlag#CHUNK_VIEW_DISTANCE}.
+     * Gets the chunk view distance of this instance, which defaults to {@link ServerProperties#CHUNK_VIEW_DISTANCE}.
      *
      * @return The chunk view distance of this instance
      */

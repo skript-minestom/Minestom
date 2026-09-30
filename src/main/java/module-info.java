@@ -30,7 +30,6 @@ module net.minestom.server {
     requires org.slf4j;
     requires org.jctools.core.jdk11;
     requires jdk.jfr;
-    requires java.desktop;
     requires net.minestom.data;
 
     // EXPORTS
@@ -129,12 +128,11 @@ module net.minestom.server {
     exports net.minestom.server.item.crossbow;
     exports net.minestom.server.item.enchant;
     exports net.minestom.server.item.instrument;
+    exports net.minestom.server.item.predicate;
     exports net.minestom.server.listener;
     exports net.minestom.server.listener.common;
     exports net.minestom.server.listener.manager;
     exports net.minestom.server.listener.preplay;
-    exports net.minestom.server.map;
-    exports net.minestom.server.map.framebuffers;
     exports net.minestom.server.message;
     exports net.minestom.server.monitoring;
     exports net.minestom.server.network;
@@ -161,6 +159,7 @@ module net.minestom.server {
     exports net.minestom.server.particle;
     exports net.minestom.server.ping;
     exports net.minestom.server.potion;
+    exports net.minestom.server.property;
     exports net.minestom.server.recipe;
     exports net.minestom.server.recipe.display;
     exports net.minestom.server.registry;

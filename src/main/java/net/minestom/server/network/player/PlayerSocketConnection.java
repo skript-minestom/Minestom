@@ -1,8 +1,8 @@
 package net.minestom.server.network.player;
 
 import net.minestom.server.MinecraftServer;
-import net.minestom.server.ServerFlag;
 import net.minestom.server.adventure.MinestomAdventure;
+import net.minestom.server.entity.GameMode;
 import net.minestom.server.entity.Player;
 import net.minestom.server.event.EventDispatcher;
 import net.minestom.server.event.ListenerHandle;
@@ -12,6 +12,7 @@ import net.minestom.server.network.ConnectionState;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.packet.PacketParser;
 import net.minestom.server.network.packet.PacketReading;
+import net.minestom.server.network.packet.PacketRegistry;
 import net.minestom.server.network.packet.PacketVanilla;
 import net.minestom.server.network.packet.PacketWriting;
 import net.minestom.server.network.packet.client.ClientPacket;
@@ -25,6 +26,7 @@ import net.minestom.server.network.packet.client.login.ClientEncryptionResponseP
 import net.minestom.server.network.packet.client.login.ClientLoginAcknowledgedPacket;
 import net.minestom.server.network.packet.client.login.ClientLoginPluginResponsePacket;
 import net.minestom.server.network.packet.client.login.ClientLoginStartPacket;
+import net.minestom.server.network.packet.client.play.ClientCreativeInventoryActionPacket;
 import net.minestom.server.network.packet.client.status.StatusRequestPacket;
 import net.minestom.server.network.packet.server.BufferedPacket;
 import net.minestom.server.network.packet.server.CachedPacket;
@@ -32,6 +34,7 @@ import net.minestom.server.network.packet.server.FramedPacket;
 import net.minestom.server.network.packet.server.SendablePacket;
 import net.minestom.server.network.packet.server.ServerPacket;
 import net.minestom.server.network.packet.server.login.SetCompressionPacket;
+import net.minestom.server.property.ServerProperties;
 import net.minestom.server.utils.collection.ConcurrentMessageQueues;
 import net.minestom.server.utils.validate.Check;
 import org.jctools.queues.MessagePassingQueue;
@@ -50,7 +53,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
-import java.util.zip.DataFormatException;
 
 /**
  * Represents a socket connection.
@@ -89,7 +91,7 @@ public class PlayerSocketConnection extends PlayerConnection {
     private int protocolVersion;
 
     private final NetworkBuffer readBuffer = NetworkBuffer.resizableBuffer(
-            ServerFlag.POOLED_BUFFER_SIZE, MinecraftServer.getRegistries());
+            ServerProperties.POOLED_BUFFER_SIZE.get(), MinecraftServer.getRegistries());
     private final MessagePassingQueue<SendablePacket> packetQueue = ConcurrentMessageQueues.mpscUnboundedArrayQueue(1024);
     private final Thread readThread, writeThread;
 
@@ -99,7 +101,7 @@ public class PlayerSocketConnection extends PlayerConnection {
     private volatile long compressionStart = Long.MAX_VALUE;
 
     // Write lock as the default behavior of the writing thread is to park itself
-    // Requires ServerFlag.FASTER_SOCKET_WRITES to be enabled
+    // Requires ServerProperties.FASTER_SOCKET_WRITES to be enabled
     private final AtomicBoolean writeSignaled = new AtomicBoolean(false);
 
     private final ListenerHandle<PlayerPacketOutEvent> outgoing = EventDispatcher.getHandle(PlayerPacketOutEvent.class);
@@ -117,13 +119,13 @@ public class PlayerSocketConnection extends PlayerConnection {
         final long writeIndex = readBuffer.writeIndex();
         final int length = readBuffer.readChannel(channel);
 
-        if (ServerFlag.PROXY_PROTOCOL && !attemptedProxyProtocolDetection) {
+        if (ServerProperties.PROXY_PROTOCOL.get() && !attemptedProxyProtocolDetection) {
             final ProxyProtocolDecoder.Result result = ProxyProtocolDecoder.parse(remoteAddress, readBuffer);
             if (result.status() == ProxyProtocolDecoder.Status.NEED_MORE) return;
             attemptedProxyProtocolDetection = true;
             if (result.status() == ProxyProtocolDecoder.Status.PRESENT) {
                 this.remoteAddress = result.clientAddress();
-            } else if (ServerFlag.PROXY_PROTOCOL_REQUIRED) {
+            } else if (ServerProperties.PROXY_PROTOCOL_REQUIRED.get()) {
                 throw new IOException("Missing required PROXY protocol header");
             }
         }
@@ -145,15 +147,22 @@ public class PlayerSocketConnection extends PlayerConnection {
         final ConnectionState startingState = getClientState();
         final PacketReading.Result<ClientPacket> result;
         try {
-            result = PacketReading.readPackets(
+            result = PacketReading.<ClientPacket>readPackets(
                     readBuffer,
                     packetParser,
                     startingState, PacketVanilla::nextClientState,
-                    compression()
+                    compression(),
+                    this::readClientPacket
             );
-        } catch (DataFormatException e) {
-            MinecraftServer.getExceptionManager().handleException(e);
-            disconnect();
+        } catch (Throwable e) {
+            // Errors thrown while still in the starting state are usually garbage
+            // from scanners. A packet that errors after a state change within the
+            // same batch is still checked against the starting state.
+            if (startingState.ordinal() > ServerProperties.SUPPRESS_MALFORMED_PACKET_ERROR_LEVEL.get())
+                MinecraftServer.getExceptionManager().handleException(e);
+            // The remaining packets of the batch are lost, disconnect to avoid
+            // reading from an invalid state.
+            if (ServerProperties.REJECT_MALFORMED_PACKET.get()) disconnect();
             return;
         }
         switch (result) {
@@ -172,8 +181,11 @@ public class PlayerSocketConnection extends PlayerConnection {
                             assert player != null;
                             player.addPacketToQueue(packet);
                         }
-                    } catch (Exception e) {
-                        MinecraftServer.getExceptionManager().handleException(e);
+                    } catch (Throwable e) {
+                        if (startingState.ordinal() > ServerProperties.SUPPRESS_MISUSED_PACKET_ERROR_LEVEL.get())
+                            MinecraftServer.getExceptionManager().handleException(e);
+                        // Packets already in the queue are unaffected.
+                        if (ServerProperties.REJECT_MISUSED_PACKET.get()) disconnect();
                     }
                 }
                 // Compact in case of incomplete read
@@ -182,14 +194,26 @@ public class PlayerSocketConnection extends PlayerConnection {
             case PacketReading.Result.Empty<ClientPacket> _ -> {
                 // Empty
             }
+            case PacketReading.Result.Skipped<ClientPacket> _ -> readBuffer.compact();
             case PacketReading.Result.Failure<ClientPacket> failure -> {
-                // Resize for next read
+                readBuffer.compact(); // Discard any complete frames before resize
                 final long requiredCapacity = failure.requiredCapacity();
-                assert requiredCapacity > readBuffer.capacity() :
-                        "New capacity should be greater than the current one: " + requiredCapacity + " <= " + readBuffer.capacity();
-                readBuffer.resize(requiredCapacity);
+                if (requiredCapacity > readBuffer.capacity()) {
+                    readBuffer.resize(requiredCapacity);
+                }
             }
         }
+    }
+
+    @Nullable ClientPacket readClientPacket(PacketRegistry.PacketInfo<? extends ClientPacket> packetInfo,
+                                            NetworkBuffer buffer) {
+        if (packetInfo.packetClass() == ClientCreativeInventoryActionPacket.class) {
+            final Player player = getPlayer();
+            if (player == null || player.getGameMode() != GameMode.CREATIVE) {
+                return null;
+            }
+        }
+        return packetInfo.serializer().read(buffer);
     }
 
     /**
@@ -223,14 +247,14 @@ public class PlayerSocketConnection extends PlayerConnection {
     }
 
     @Override
-    public void sendPackets(Collection<SendablePacket> packets) {
+    public void sendPackets(Collection<? extends SendablePacket> packets) {
         for (SendablePacket packet : packets) this.packetQueue.relaxedOffer(packet);
         unlockWriteThread();
     }
 
-    // Requires ServerFlag.FASTER_SOCKET_WRITES
+    // Requires ServerProperties.FASTER_SOCKET_WRITES
     private void unlockWriteThread() {
-        if (!ServerFlag.FASTER_SOCKET_WRITES) return;
+        if (!ServerProperties.FASTER_SOCKET_WRITES.get()) return;
         if (!this.writeSignaled.compareAndExchange(false, true)) {
             LockSupport.unpark(writeThread);
         }
@@ -367,7 +391,7 @@ public class PlayerSocketConnection extends PlayerConnection {
                 }
             }
             // Translation
-            if (ServerFlag.AUTOMATIC_COMPONENT_TRANSLATION && packet instanceof ServerPacket.ComponentHolding translatablePacket) {
+            if (ServerProperties.AUTOMATIC_COMPONENT_TRANSLATION.get() && packet instanceof ServerPacket.ComponentHolding translatablePacket) {
                 packet = translatablePacket.copyWithOperator(component ->
                         MinestomAdventure.COMPONENT_TRANSLATOR.apply(component, Objects.requireNonNullElseGet(player.getLocale(), MinestomAdventure::getDefaultLocale)));
             }
@@ -438,11 +462,11 @@ public class PlayerSocketConnection extends PlayerConnection {
         // Consume queued packets
         var packetQueue = this.packetQueue;
         if (packetQueue.isEmpty()) {
-            if (!ServerFlag.FASTER_SOCKET_WRITES) {
+            if (!ServerProperties.FASTER_SOCKET_WRITES.get()) {
                 try {
                     // Can probably be improved by waking up at the end of the tick
                     // But this work well enough and without additional state.
-                    Thread.sleep(1000 / ServerFlag.SERVER_TICKS_PER_SECOND / 2);
+                    Thread.sleep(1000 / ServerProperties.SERVER_TICKS_PER_SECOND.get() / 2);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }

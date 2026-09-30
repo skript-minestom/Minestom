@@ -1,6 +1,5 @@
 package net.minestom.server.listener.manager;
 
-import net.minestom.server.MinecraftServer;
 import net.minestom.server.event.EventDispatcher;
 import net.minestom.server.event.player.PlayerPacketEvent;
 import net.minestom.server.listener.AbilitiesListener;
@@ -111,6 +110,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class PacketListenerManager {
@@ -119,6 +119,7 @@ public final class PacketListenerManager {
 
     @SuppressWarnings({"unchecked", "rawtypes"}) // generic array creation
     private final Map<Class<? extends ClientPacket>, PacketPrePlayListenerConsumer>[] listeners = new Map[ConnectionState.values().length];
+    private final Set<MissingListener> missingListenerWarnings = ConcurrentHashMap.newKeySet();
 
     public PacketListenerManager() {
         for (int i = 0; i < listeners.length; i++) {
@@ -203,6 +204,8 @@ public final class PacketListenerManager {
 
     /**
      * Processes a packet by getting its {@link PacketPlayListenerConsumer} and calling all the packet listeners.
+     * <p>
+     * Callers are responsible for handling any errors.
      *
      * @param packet     the received packet
      * @param connection the connection of the player who sent the packet
@@ -221,7 +224,9 @@ public final class PacketListenerManager {
 
         // Listener can be null if none has been set before, call PacketConsumer anyway
         if (packetListenerConsumer == null) {
-            LOGGER.warn("Packet {}:{} does not have any default listener! (The issue likely comes from Minestom)", clazz, currState);
+            if (missingListenerWarnings.add(new MissingListener(clazz, currState))) {
+                LOGGER.warn("Packet {}:{} does not have any default listener! (The issue likely comes from Minestom)", clazz, currState);
+            }
             return;
         }
 
@@ -235,12 +240,10 @@ public final class PacketListenerManager {
         }
 
         // Finally execute the listener
-        try {
-            packetListenerConsumer.accept(packet, connection);
-        } catch (Exception e) {
-            // Packet is likely invalid
-            MinecraftServer.getExceptionManager().handleException(e);
-        }
+        packetListenerConsumer.accept(packet, connection); // possible throws
+    }
+
+    private record MissingListener(Class<?> packetClass, ConnectionState state) {
     }
 
     /**
