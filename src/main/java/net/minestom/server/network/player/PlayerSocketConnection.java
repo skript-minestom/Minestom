@@ -59,7 +59,6 @@ import java.util.concurrent.locks.LockSupport;
  * <p>
  * It is the implementation used for all network client.
  */
-@ApiStatus.Internal
 public class PlayerSocketConnection extends PlayerConnection {
     private static final Set<Class<? extends ClientPacket>> IMMEDIATE_PROCESS_PACKETS = Set.of(
             ClientHandshakePacket.class, // First received packet
@@ -480,6 +479,7 @@ public class PlayerSocketConnection extends PlayerConnection {
         }
         if (!channel.isConnected()) throw new EOFException("Channel is closed");
         NetworkBuffer buffer = PacketVanilla.PACKET_POOL.get();
+        buffer.registries(MinecraftServer.getRegistries());
         // Write to buffer
         PacketWriting.writeQueue(buffer, packetQueue, 1, (b, packet) -> {
             final boolean compressed = sentPacketCounter.get() > compressionStart;

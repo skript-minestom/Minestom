@@ -160,6 +160,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -174,8 +175,6 @@ import java.util.function.UnaryOperator;
  * You can easily create your own implementation of this and use it with {@link ConnectionManager#setPlayerProvider(PlayerProvider)}.
  */
 public class Player extends LivingEntity implements CommandSender, HoverEventSource<ShowEntity>, NamedAndIdentified {
-    private static final DynamicRegistry<DimensionType> DIMENSION_TYPE_REGISTRY = MinecraftServer.getDimensionTypeRegistry();
-
     private static final Component REMOVE_MESSAGE = Component.text("You have been removed from the server without reason.", NamedTextColor.RED);
     private static final Component MISSING_REQUIRED_RESOURCE_PACK = Component.text("Required resource pack was not loaded.", NamedTextColor.RED);
 
@@ -206,6 +205,8 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
     private PlayerSkin skin;
 
     private @Nullable Instance pendingInstance = null;
+    // Counts the calls to setInstance, so a spawn waiting for chunks knows when a later call replaces it
+    private final AtomicInteger instanceRequests = new AtomicInteger();
     private int dimensionTypeId;
     private volatile GameMode gameMode;
     private WorldPos deathLocation;
@@ -311,7 +312,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
         refreshAnswerKeepAlive(true);
 
         this.gameMode = GameMode.SURVIVAL;
-        this.dimensionTypeId = DIMENSION_TYPE_REGISTRY.getId(DimensionType.OVERWORLD); // Default dimension
+        this.dimensionTypeId = dimensionTypeRegistry().getId(DimensionType.OVERWORLD); // Default dimension
         this.levelFlat = true;
 
         // FakePlayer init its connection there
@@ -342,7 +343,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
         this.pendingInstance = null;
 
         this.removed = false;
-        this.dimensionTypeId = DIMENSION_TYPE_REGISTRY.getId(spawnInstance.getDimensionType());
+        this.dimensionTypeId = dimensionTypeRegistry().getId(spawnInstance.getDimensionType());
 
         final JoinGamePacket joinGamePacket = new JoinGamePacket(
                 getEntityId(), this.hardcore, List.of(), 0,
@@ -667,6 +668,9 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
      * <p>
      * Be aware that because chunk operations are expensive,
      * it is possible for this method to be non-blocking when retrieving chunks is required.
+     * <p>
+     * A future that waits for chunks completes with a {@link CancellationException} when a later call to this method
+     * replaces it, and the player stays wherever that later call moves it.
      *
      * @param instance      the new player instance
      * @param spawnPosition the new position of the player
@@ -676,6 +680,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
     public CompletableFuture<Void> setInstance(Instance instance, Pos spawnPosition) {
         final Instance currentInstance = this.instance;
         Check.argCondition(currentInstance == instance, "Instance should be different than the current one");
+        final int request = instanceRequests.incrementAndGet();
         if (SharedInstance.areLinked(currentInstance, instance) && spawnPosition.sameChunk(this.position)) {
             // The player already has the good version of all the chunks.
             // We just need to refresh his entity viewing list and add him to the instance
@@ -729,6 +734,10 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
         var _ = CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new))
                 .thenRun(() -> {
                     scheduler.scheduleNextProcess(() -> {
+                        if (instanceRequests.get() != request) {
+                            future.completeExceptionally(new CancellationException("Another setInstance call replaced this one"));
+                            return;
+                        }
                         runnable.accept(instance);
                         future.complete(null);
                     });
@@ -1743,7 +1752,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
      * @return the player current dimension
      */
     public DimensionType getDimensionType() {
-        return DIMENSION_TYPE_REGISTRY.get(dimensionTypeId);
+        return dimensionTypeRegistry().get(dimensionTypeId);
     }
 
     public PlayerInventory getInventory() {
@@ -1829,11 +1838,17 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
     protected void sendDimension(RegistryKey<DimensionType> dimensionType, String dimensionName, long hashedSeed) {
         Check.argCondition(instance.getDimensionName().equals(dimensionName),
                 "The dimension needs to be different than the current one!");
-        this.dimensionTypeId = DIMENSION_TYPE_REGISTRY.getId(dimensionType);
+        this.dimensionTypeId = dimensionTypeRegistry().getId(dimensionType);
         sendPacket(new RespawnPacket(new PlayerSpawnInfo(dimensionTypeId, dimensionName,
                 hashedSeed, gameMode, gameMode, false, levelFlat,
                 deathLocation, portalCooldown, DEFAULT_SEA_LEVEL), (byte) RespawnPacket.COPY_ALL));
         refreshClientStateAfterRespawn();
+    }
+
+    // Horrible temporary method because of how registries are synchronized, and the player can exist without an instance.
+    @ApiStatus.Internal
+    private static DynamicRegistry<DimensionType> dimensionTypeRegistry() {
+        return MinecraftServer.getDimensionTypeRegistry();
     }
 
     /**
