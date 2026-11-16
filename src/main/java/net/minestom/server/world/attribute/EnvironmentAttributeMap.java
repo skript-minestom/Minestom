@@ -1,15 +1,12 @@
 package net.minestom.server.world.attribute;
 
 import net.minestom.server.codec.Codec;
-import net.minestom.server.codec.Result;
 import net.minestom.server.codec.StructCodec;
-import net.minestom.server.codec.Transcoder;
 import net.minestom.server.utils.Either;
 import net.minestom.server.world.attribute.EnvironmentAttribute.Modifier;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import static net.minestom.server.world.attribute.EnvironmentAttribute.isExcludedFromNetworkRegistry;
 
@@ -20,23 +17,7 @@ public record EnvironmentAttributeMap(Map<EnvironmentAttribute<?>, Entry<?, ?>> 
             .mapValueTyped(Entry::codec0, true)
             .transform(EnvironmentAttributeMap::new, EnvironmentAttributeMap::entries);
     public static final Codec<EnvironmentAttributeMap> NETWORK_CODEC = CODEC
-            .transform(EnvironmentAttributeMap::filterSyncable, EnvironmentAttributeMap::filterSyncable);
-
-    public static final Codec<EnvironmentAttributeMap> NETWORK_CODEC = new Codec<>() {
-        @Override
-        public <D> Result<EnvironmentAttributeMap> decode(Transcoder<D> coder, D value) {
-            return CODEC.decode(coder, value);
-        }
-
-        @Override
-        public <D> Result<D> encode(Transcoder<D> coder, EnvironmentAttributeMap value) {
-            if (value.entries().isEmpty()) return CODEC.encode(coder, value);
-            Map<EnvironmentAttribute<?>, Entry<?, ?>> filtered = value.entries().entrySet().stream()
-                    .filter(entry -> !isExcludedFromNetworkRegistry(entry.getKey()))
-                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-            return CODEC.encode(coder, new EnvironmentAttributeMap(filtered));
-        }
-    };
+            .transform(EnvironmentAttributeMap::filterSyncable, EnvironmentAttributeMap::filterForNetwork);
 
     public static Builder builder() {
         return new Builder();
@@ -58,6 +39,21 @@ public record EnvironmentAttributeMap(Map<EnvironmentAttribute<?>, Entry<?, ?>> 
         final Map<EnvironmentAttribute<?>, Entry<?, ?>> synced = new HashMap<>();
         for (var entry : entries.entrySet()) {
             if (entry.getKey().syncable()) synced.put(entry.getKey(), entry.getValue());
+        }
+        return synced.size() == entries.size() ? this : new EnvironmentAttributeMap(synced);
+    }
+
+    /**
+     * Returns a map holding only the attributes that are syncable and also understood by older
+     * clients, see {@link EnvironmentAttributes#NETWORK_REGISTRY_EXCLUDED}.
+     */
+    private EnvironmentAttributeMap filterForNetwork() {
+        final Map<EnvironmentAttribute<?>, Entry<?, ?>> synced = new HashMap<>();
+        for (var entry : entries.entrySet()) {
+            final EnvironmentAttribute<?> attribute = entry.getKey();
+            if (attribute.syncable() && !isExcludedFromNetworkRegistry(attribute)) {
+                synced.put(attribute, entry.getValue());
+            }
         }
         return synced.size() == entries.size() ? this : new EnvironmentAttributeMap(synced);
     }
