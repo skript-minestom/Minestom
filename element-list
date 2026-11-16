@@ -76,8 +76,10 @@ net.minestom.server.instance.batch
 net.minestom.server.instance.block
 net.minestom.server.instance.block.banner
 net.minestom.server.instance.block.jukebox
+net.minestom.server.instance.block.pot
 net.minestom.server.instance.block.predicate
 net.minestom.server.instance.block.rule
+net.minestom.server.instance.block.transformer
 net.minestom.server.instance.fluid
 net.minestom.server.instance.gamerule
 net.minestom.server.instance.generator
@@ -99,6 +101,7 @@ net.minestom.server.listener
 net.minestom.server.listener.common
 net.minestom.server.listener.manager
 net.minestom.server.listener.preplay
+net.minestom.server.loot.number
 net.minestom.server.message
 net.minestom.server.monitoring
 net.minestom.server.network
@@ -158,5 +161,6 @@ net.minestom.server.world
 net.minestom.server.world.attribute
 net.minestom.server.world.biome
 net.minestom.server.world.clock
+net.minestom.server.world.generation
 net.minestom.server.world.timeline
 net.minestom.server.worldevent
